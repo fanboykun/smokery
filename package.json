@@ -1,0 +1,11 @@
+{
+  "name": "smokery",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev:web": "bun --filter @smokery/web dev",
+    "build:web": "bun --filter @smokery/web build",
+    "check": "bun --filter @smokery/web check"
+  }
+}

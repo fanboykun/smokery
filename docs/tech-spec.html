@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tech Spec — OpenAPI Smoke Testing Platform</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;font-size:14px;color:#1a1a18;line-height:1.6;background:#fafaf8}
+:root{--sidebar-w:220px;--border:#e8e6e0;--bg2:#f4f2ed;--text2:#6b6b65;--text3:#9a9a94;--blue:#0C447C;--blue-bg:#E6F1FB;--green:#27500A;--green-bg:#EAF3DE;--amber:#633806;--amber-bg:#FAEEDA;--red:#791F1F;--red-bg:#FCEBEB;--purple:#3C3489;--purple-bg:#EEEDFE;--radius:8px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;border-right:1px solid var(--border);padding:16px 0;position:sticky;top:0;height:100vh;overflow-y:auto;background:#fff}
+.sidebar-logo{padding:8px 16px 16px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.sidebar-logo h1{font-size:13px;font-weight:600;color:#1a1a18}
+.sidebar-logo p{font-size:11px;color:var(--text2);margin-top:2px}
+.sidebar-section{padding:8px 16px 3px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-top:6px}
+.nav-item{display:block;width:100%;text-align:left;background:none;border:none;padding:6px 16px;font-size:13px;color:var(--text2);cursor:pointer;border-left:2px solid transparent;transition:all .12s;text-decoration:none}
+.nav-item:hover{color:#1a1a18;background:var(--bg2)}
+.nav-item.active{color:#1a1a18;border-left-color:#185FA5;font-weight:500;background:#EEF5FC}
+.content{flex:1;padding:32px 40px;max-width:860px}
+.section{display:none}.section.active{display:block}
+.section-title{font-size:22px;font-weight:600;margin-bottom:4px}
+.section-sub{font-size:13px;color:var(--text2);margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;color:#1a1a18}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+pre{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:12px;font-family:"SF Mono","Fira Code",monospace;overflow-x:auto;line-height:1.55;margin:8px 0;white-space:pre}
+code{font-family:"SF Mono","Fira Code",monospace;font-size:12px;background:var(--bg2);padding:1px 5px;border-radius:4px}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:600;letter-spacing:.02em}
+.badge-get{background:var(--blue-bg);color:var(--blue)}
+.badge-post{background:var(--green-bg);color:var(--green)}
+.badge-put{background:var(--amber-bg);color:var(--amber)}
+.badge-patch{background:var(--amber-bg);color:var(--amber)}
+.badge-del{background:var(--red-bg);color:var(--red)}
+.badge-ws{background:var(--purple-bg);color:var(--purple)}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:100px;font-size:11px;font-weight:600}
+.tag-go{background:var(--blue-bg);color:var(--blue)}
+.tag-svelte{background:#FAECE7;color:#993C1D}
+.tag-db{background:var(--green-bg);color:var(--green)}
+.tag-infra{background:var(--purple-bg);color:var(--purple)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;font-size:11px;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2);text-transform:uppercase;letter-spacing:.04em}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.mono{font-family:"SF Mono","Fira Code",monospace;font-size:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.dot-green{background:#639922}.dot-amber{background:#BA7517}.dot-red{background:#E24B4A}
+.flow-row{display:flex;align-items:center;gap:0;margin:10px 0;flex-wrap:wrap;gap:4px}
+.flow-box{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;white-space:nowrap}
+.flow-arrow{padding:0 4px;color:var(--text3);font-size:14px}
+ul.spec-list{list-style:none;padding:0}
+ul.spec-list li{padding:4px 0;font-size:13px;border-bottom:1px solid var(--border)}
+ul.spec-list li:last-child{border-bottom:none}
+ul.spec-list li::before{content:"—";margin-right:8px;color:var(--text3)}
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.metric{background:var(--bg2);border-radius:6px;padding:12px;text-align:center}
+.metric-val{font-size:22px;font-weight:600}
+.metric-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+.sub-note{font-size:11px;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+@media print{.sidebar{display:none}.content{max-width:100%;padding:20px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h1>Smoke Platform</h1>
+    <p>Technical Specification</p>
+  </div>
+  <div class="sidebar-section">Foundation</div>
+  <button class="nav-item active" onclick="show('overview')">Overview</button>
+  <button class="nav-item" onclick="show('stack')">Tech Stack</button>
+  <button class="nav-item" onclick="show('arch')">Architecture</button>
+  <div class="sidebar-section">Backend</div>
+  <button class="nav-item" onclick="show('modules')">Go Modules</button>
+  <button class="nav-item" onclick="show('schema')">DB Schema</button>
+  <button class="nav-item" onclick="show('api')">API Routes</button>
+  <button class="nav-item" onclick="show('compiler')">Compiler Pipeline</button>
+  <button class="nav-item" onclick="show('runner')">Runner</button>
+  <div class="sidebar-section">Frontend</div>
+  <button class="nav-item" onclick="show('fe-pages')">Svelte Pages</button>
+  <button class="nav-item" onclick="show('fe-components')">Components</button>
+  <button class="nav-item" onclick="show('realtime')">Real-time</button>
+  <div class="sidebar-section">Delivery</div>
+  <button class="nav-item" onclick="show('infra')">Infrastructure</button>
+  <button class="nav-item" onclick="show('mvp')">MVP Scope</button>
+</nav>
+<div class="content">
+
+<div id="s-overview" class="section active">
+  <div class="section-title">Platform Overview</div>
+  <div class="section-sub">OpenAPI-driven smoke testing — Go backend · SvelteKit frontend</div>
+  <div class="flow-row">
+    <div class="flow-box">OpenAPI Spec</div><div class="flow-arrow">→</div>
+    <div class="flow-box">Compiler</div><div class="flow-arrow">→</div>
+    <div class="flow-box">Smoke Plan</div><div class="flow-arrow">→</div>
+    <div class="flow-box">Runner</div><div class="flow-arrow">→</div>
+    <div class="flow-box">Run Result</div><div class="flow-arrow">→</div>
+    <div class="flow-box">Reports</div>
+  </div>
+  <br>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot dot-green"></span>Control Plane</div>
+      <ul class="spec-list">
+        <li>Project &amp; spec management</li>
+        <li>OpenAPI ingestion + analysis</li>
+        <li>Environment &amp; auth profiles</li>
+        <li>Flow &amp; suite builder</li>
+        <li>Compiler + plan preview</li>
+        <li>Run orchestration</li>
+        <li>Persistent reports</li>
+        <li>Comments &amp; collaboration</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot dot-amber"></span>Execution Plane</div>
+      <ul class="spec-list">
+        <li>Accepts compiled plan only</li>
+        <li>Composes HTTP requests</li>
+        <li>Injects auth + variables</li>
+        <li>Executes flows &amp; suites</li>
+        <li>JSONPath captures</li>
+        <li>Assertions &amp; schema checks</li>
+        <li>Trace ID extraction</li>
+        <li>Returns structured result</li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Design constraints</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;font-size:13px">
+      <div><strong>Compiler-first</strong><br><span style="color:#6b6b65">UI → canonical config → compiler → plan. Runner executes plan only.</span></div>
+      <div><strong>Explicit over magic</strong><br><span style="color:#6b6b65">System suggests; user always overrides classification, shapes, destructive flags.</span></div>
+      <div><strong>Persistent + collaborative</strong><br><span style="color:#6b6b65">Run results are first-class artifacts with comments, history, and sharing.</span></div>
+    </div>
+  </div>
+</div>
+
+<div id="s-stack" class="section">
+  <div class="section-title">Tech Stack</div>
+  <div class="section-sub">Chosen libraries and rationale for each concern</div>
+  <div class="card">
+    <div class="card-title"><span class="tag tag-go">Go</span> Backend</div>
+    <table>
+      <tr><th>Concern</th><th>Package</th><th>Notes</th></tr>
+      <tr><td>HTTP framework</td><td><code>labstack/echo/v4</code></td><td>Middleware-first, fast, good WebSocket support</td></tr>
+      <tr><td>DB driver</td><td><code>jackc/pgx/v5</code></td><td>Native PG driver, better perf than database/sql</td></tr>
+      <tr><td>Query generation</td><td><code>sqlc</code></td><td>Type-safe SQL, avoids ORM magic on complex joins</td></tr>
+      <tr><td>Migrations</td><td><code>golang-migrate</code></td><td>File-based, CI-friendly, PG + embedded files</td></tr>
+      <tr><td>OpenAPI parsing</td><td><code>pb33f/libopenapi</code></td><td>Full OAS3.1 support, high-model fidelity</td></tr>
+      <tr><td>JSON Schema validation</td><td><code>santhosh-tekuri/jsonschema/v6</code></td><td>Draft 2020-12 support, used in runner assertions</td></tr>
+      <tr><td>JSONPath extraction</td><td><code>tidwall/gjson</code></td><td>Fast, zero-alloc JSONPath for captures</td></tr>
+      <tr><td>Job queue</td><td><code>riverqueue/river</code></td><td>PG-native job queue, no Redis dep for MVP</td></tr>
+      <tr><td>Config</td><td><code>spf13/viper</code></td><td>Env + file config with hot reload</td></tr>
+      <tr><td>Auth / JWT</td><td><code>golang-jwt/jwt/v5</code></td><td>Slim, well-maintained</td></tr>
+      <tr><td>Logging</td><td><code>rs/zerolog</code></td><td>Structured JSON, zero-alloc hot path</td></tr>
+      <tr><td>Validation</td><td><code>go-playground/validator/v10</code></td><td>Struct tag validation for request payloads</td></tr>
+      <tr><td>Object storage</td><td><code>minio/minio-go/v7</code></td><td>S3-compatible, dev uses local MinIO</td></tr>
+      <tr><td>WebSocket</td><td><code>gorilla/websocket</code></td><td>Live run status streaming to UI</td></tr>
+      <tr><td>Testing</td><td><code>testify</code> + <code>testcontainers-go</code></td><td>Integration tests with real PG containers</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="tag tag-svelte">Svelte</span> Frontend</div>
+    <table>
+      <tr><th>Concern</th><th>Package</th><th>Notes</th></tr>
+      <tr><td>Framework</td><td><code>SvelteKit 2.x</code></td><td>SSR optional, file-based routing, adapters</td></tr>
+      <tr><td>Language</td><td>TypeScript 5.x</td><td>Strict mode throughout</td></tr>
+      <tr><td>Styling</td><td>TailwindCSS 4.x</td><td>Utility-first, custom design tokens</td></tr>
+      <tr><td>Components</td><td><code>shadcn-svelte</code></td><td>Accessible, unstyled primitives</td></tr>
+      <tr><td>Data fetching</td><td><code>@tanstack/svelte-query</code></td><td>Cache, optimistic updates, infinite queries</td></tr>
+      <tr><td>Forms</td><td><code>sveltekit-superforms</code> + <code>zod</code></td><td>Server-validated forms, schema sharing</td></tr>
+      <tr><td>Code editor</td><td><code>monaco-editor</code></td><td>YAML/JSON editing for config overrides</td></tr>
+      <tr><td>Diagrams</td><td><code>mermaid</code></td><td>Sequence + flow diagrams from run data</td></tr>
+      <tr><td>Charts</td><td><code>layerchart</code></td><td>Svelte-native D3 charts for trends/latency</td></tr>
+      <tr><td>Icons</td><td><code>lucide-svelte</code></td><td>Consistent icon set</td></tr>
+      <tr><td>Diff viewer</td><td><code>diff-match-patch</code></td><td>Schema drift and spec change views</td></tr>
+      <tr><td>HTTP client</td><td>SvelteKit fetch + interceptors</td><td>Native fetch with auth headers injected</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="tag tag-db">Data</span> Storage</div>
+    <table>
+      <tr><th>Store</th><th>Version</th><th>Use</th></tr>
+      <tr><td>PostgreSQL</td><td>16+</td><td>All relational data, job queue (River), JSONB for run payloads</td></tr>
+      <tr><td>Redis</td><td>7+ (phase 2)</td><td>Session cache, pub/sub for live run events at scale</td></tr>
+      <tr><td>MinIO / S3</td><td>—</td><td>Full run result artifacts, HTML reports, JUnit XML, PDFs</td></tr>
+    </table>
+  </div>
+</div>
+
+<div id="s-arch" class="section">
+  <div class="section-title">Architecture</div>
+  <div class="section-sub">Service boundaries and data flow</div>
+  <div class="card">
+    <div class="card-title">Process map</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px">
+      <div>
+        <div style="font-weight:600;margin-bottom:8px">api-server (Go)</div>
+        <ul class="spec-list">
+          <li>REST API on <code>:8080</code></li>
+          <li>WebSocket <code>/ws/runs/:id</code></li>
+          <li>Serves compiled plans</li>
+          <li>Stores + queries results</li>
+          <li>Enqueues runner jobs via River</li>
+          <li>Generates reports</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-weight:600;margin-bottom:8px">runner (Go — same binary or separate)</div>
+        <ul class="spec-list">
+          <li>Polls River job queue</li>
+          <li>Fetches plan from API</li>
+          <li>Executes HTTP calls</li>
+          <li>Streams progress via WebSocket</li>
+          <li>POSTs structured result back</li>
+          <li>Can run as standalone CLI</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Deployment topology (MVP)</div>
+    <pre>┌─────────────────────────────────────────────────────┐
+│  Docker Compose (dev) / K8s (prod)                  │
+│                                                     │
+│   SvelteKit SSR  ──► api-server :8080               │
+│   :3000               │                             │
+│                       ├── PostgreSQL :5432           │
+│   Runner process ◄────┤   (River jobs embedded)     │
+│   (same container     │                             │
+│    or separate)       └── MinIO :9000               │
+│                                                     │
+└─────────────────────────────────────────────────────┘</pre>
+  </div>
+  <div class="card">
+    <div class="card-title">Repository layout</div>
+    <pre>/
+├── apps/
+│   ├── api/          # Go API server
+│   │   ├── cmd/
+│   │   ├── internal/
+│   │   │   ├── compiler/
+│   │   │   ├── runner/
+│   │   │   ├── spec/
+│   │   │   ├── report/
+│   │   │   └── api/
+│   │   └── db/
+│   │       ├── migrations/
+│   │       └── queries/
+│   └── web/          # SvelteKit
+│       └── src/
+│           ├── routes/
+│           ├── lib/
+│           └── components/
+├── packages/
+│   └── types/        # Shared TS types (generated from Go)
+└── docker-compose.yml</pre>
+  </div>
+</div>
+
+<div id="s-modules" class="section">
+  <div class="section-title">Go Module Breakdown</div>
+  <div class="section-sub">Internal packages inside <code>apps/api/internal/</code></div>
+  <div class="card">
+    <div class="card-title">spec — OpenAPI ingestion</div>
+    <pre>type Analyzer struct { ... }
+func (a *Analyzer) Ingest(doc []byte) (*SpecAnalysis, error)
+func (a *Analyzer) ClassifyOperation(op *openapi.Operation) OperationKind
+func (a *Analyzer) DetectListShape(op *openapi.Operation) *ListShapeHint
+func (a *Analyzer) BuildRegistry(analysis *SpecAnalysis) *OperationRegistry</pre>
+    <div class="sub-note">Uses pb33f/libopenapi. Emits OperationRegistry with classification, pagination hints, enum params, destructive flags.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">compiler — config → plan</div>
+    <pre>type Compiler struct { registry *OperationRegistry; ... }
+func (c *Compiler) Compile(cfg *ProjectConfig) (*SmokePlan, []CompileError)
+// pipeline steps:
+// 1. ResolveEnvironment   4. ValidateDestructive
+// 2. ResolveAuth          5. GenerateSuiteCases
+// 3. ResolveFlowSteps     6. ValidateRequiredInputs</pre>
+    <div class="sub-note">Returns a fully serialisable SmokePlan (JSONB in DB). Compile errors include field path + message, surfaced in plan preview UI.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">runner — plan execution</div>
+    <pre>type Runner struct { httpClient *http.Client; store CaptureStore; ... }
+func (r *Runner) Execute(ctx context.Context, plan *SmokePlan) (*RunResult, error)
+func (r *Runner) executeFlow(flow *FlowPlan) *FlowRunResult
+func (r *Runner) executeSuite(suite *SuitePlan) *SuiteRunResult
+func (r *Runner) executeRequest(req *RequestSpec) *RequestExecutionResult</pre>
+    <div class="sub-note">Streams progress events via chan RunEvent. Caller bridges to WebSocket. Cleanup steps run in deferred goroutine.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">report — run result → audience views</div>
+    <pre>type Generator struct { ... }
+func (g *Generator) BackendDebugView(run *RunResult) *ReportView
+func (g *Generator) FrontendContractView(run *RunResult) *ReportView
+func (g *Generator) AnalystFlowView(run *RunResult) *ReportView
+func (g *Generator) CISummary(run *RunResult) *CISummary
+func (g *Generator) GenerateMermaid(flow *FlowRunResult) string
+func (g *Generator) HTMLReport(run *RunResult, tpl ReportTemplate) ([]byte, error)</pre>
+  </div>
+  <div class="card">
+    <div class="card-title">assertion — validation engine</div>
+    <pre>func AssertStatus(actual int, expected []int) AssertionResult
+func AssertSchema(body []byte, schema *jsonschema.Schema) AssertionResult
+func AssertJSONPath(body []byte, path string, expected any) AssertionResult
+func AssertLatency(ms int, threshold int) AssertionResult
+func AssertListShape(body []byte, shape *ListShape) []AssertionResult</pre>
+  </div>
+</div>
+
+<div id="s-schema" class="section">
+  <div class="section-title">Database Schema</div>
+  <div class="section-sub">PostgreSQL 16 — key tables</div>
+  <div class="card">
+    <pre style="font-size:12px">-- Core entities
+projects          (id, name, slug, created_at)
+specs             (id, project_id, version, raw_yaml, analysis JSONB, created_at)
+operation_overrides (id, project_id, operation_id, overrides JSONB)
+environments      (id, project_id, name, base_url, variables JSONB)
+auth_profiles     (id, project_id, name, type, config JSONB)
+fixtures          (id, project_id, name, data JSONB)
+
+-- Configuration
+flows             (id, project_id, name, description, config JSONB)
+flow_steps        (id, flow_id, position, operation_id, config JSONB)
+suites            (id, project_id, name, description, config JSONB)
+
+-- Execution
+smoke_plans       (id, project_id, spec_id, compiled_plan JSONB, created_at)
+runs              (id, project_id, plan_id, env_id, status, triggered_by JSONB,
+                   started_at, finished_at, summary JSONB)
+flow_run_results  (id, run_id, flow_id, status, started_at, finished_at)
+step_results      (id, flow_run_id, step_id, request JSONB, response JSONB,
+                   assertions JSONB, captures JSONB, trace JSONB, status, duration_ms)
+suite_run_results (id, run_id, suite_id, status, started_at, finished_at)
+case_results      (id, suite_run_id, operation_id, case_kind, request JSONB,
+                   response JSONB, assertions JSONB, trace JSONB, status, duration_ms)
+
+-- Collaboration
+run_comments      (id, run_id, ref_type, ref_id, user_id, body, created_at)
+failure_labels    (id, result_type, result_id, category, state, assignee_id)
+
+-- River job queue (managed by riverqueue/river)
+river_jobs        (managed by riverqueue/river)</pre>
+    <div class="sub-note">Large payloads stored in JSONB with retention_policy enforced by nightly cleanup. Artifacts (HTML, JUnit) written to MinIO, URL stored in run_artifacts table.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">JSONB column conventions</div>
+    <table>
+      <tr><th>Column</th><th>Shape</th></tr>
+      <tr><td><code>runs.summary</code></td><td><code>{total, passed, failed, warnings, skipped, duration_ms}</code></td></tr>
+      <tr><td><code>step_results.trace</code></td><td><code>{requestId, traceId, spanId, links: {logs, traces}}</code></td></tr>
+      <tr><td><code>case_results.assertions</code></td><td><code>[{kind, passed, expected, actual, message}]</code></td></tr>
+      <tr><td><code>auth_profiles.config</code></td><td><code>{type: "bearer|apiKey|basic|loginFlow", …}</code></td></tr>
+    </table>
+  </div>
+</div>
+
+<div id="s-api" class="section">
+  <div class="section-title">API Routes</div>
+  <div class="section-sub">REST — base path <code>/api/v1</code></div>
+  <div class="card">
+    <div class="card-title">Projects &amp; Specs</div>
+    <table>
+      <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/projects</td><td>List projects</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects</td><td>Create project</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/specs</td><td>Import OpenAPI spec</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/projects/:id/specs/:ver/analysis</td><td>Return SpecAnalysis</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/projects/:id/operations</td><td>List operation registry</td></tr>
+      <tr><td><span class="badge badge-put">PUT</span></td><td class="mono">/projects/:id/operations/:opId</td><td>Save operation override</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">Config (Env / Auth / Fixtures)</div>
+    <table>
+      <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/projects/:id/environments</td><td>List environments</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/environments</td><td>Create environment</td></tr>
+      <tr><td><span class="badge badge-put">PUT</span></td><td class="mono">/projects/:id/environments/:eid</td><td>Update environment</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/auth-profiles</td><td>Create auth profile</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/fixtures</td><td>Create fixture</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">Flows &amp; Suites</div>
+    <table>
+      <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/projects/:id/flows</td><td>List flows</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/flows</td><td>Create flow</td></tr>
+      <tr><td><span class="badge badge-put">PUT</span></td><td class="mono">/projects/:id/flows/:fid</td><td>Update flow</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/flows/:fid/steps</td><td>Add step</td></tr>
+      <tr><td><span class="badge badge-patch">PATCH</span></td><td class="mono">/projects/:id/flows/:fid/steps/:sid</td><td>Update step</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/suites</td><td>Create suite</td></tr>
+      <tr><td><span class="badge badge-put">PUT</span></td><td class="mono">/projects/:id/suites/:sid</td><td>Update suite config</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">Plans &amp; Runs</div>
+    <table>
+      <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/plans/compile</td><td>Compile (preview only, no persist)</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/plans</td><td>Compile + persist plan</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/projects/:id/runs</td><td>Start run from plan ID + env ID</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/projects/:id/runs</td><td>List runs (paginated)</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/runs/:runId</td><td>Full run result</td></tr>
+      <tr><td><span class="badge badge-get">GET</span></td><td class="mono">/runs/:runId/report?view=backend</td><td>Audience-specific report</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/runs/:runId/cancel</td><td>Cancel in-progress run</td></tr>
+      <tr><td><span class="badge badge-ws">WS</span></td><td class="mono">/ws/runs/:runId</td><td>Live run event stream</td></tr>
+      <tr><td><span class="badge badge-post">POST</span></td><td class="mono">/runs/:runId/comments</td><td>Add comment to run</td></tr>
+      <tr><td><span class="badge badge-patch">PATCH</span></td><td class="mono">/results/:type/:resultId/label</td><td>Set failure classification</td></tr>
+    </table>
+  </div>
+</div>
+
+<div id="s-compiler" class="section">
+  <div class="section-title">Compiler Pipeline</div>
+  <div class="section-sub">Config → executable plan — all validation before execution</div>
+  <div class="card">
+    <table>
+      <tr><th>#</th><th>Stage</th><th>Output / error examples</th></tr>
+      <tr><td>1</td><td>Load &amp; normalize spec</td><td>Canonical operation registry</td></tr>
+      <tr><td>2</td><td>Apply operation overrides</td><td>User-defined kinds, destructive flags, shapes</td></tr>
+      <tr><td>3</td><td>Resolve environment</td><td><span class="badge badge-del">ERR</span> baseUrl missing for env staging</td></tr>
+      <tr><td>4</td><td>Resolve auth profiles</td><td><span class="badge badge-del">ERR</span> secret API_TOKEN not found</td></tr>
+      <tr><td>5</td><td>Resolve flow steps</td><td><span class="badge badge-del">ERR</span> step.get_user: path param id unresolvable</td></tr>
+      <tr><td>6</td><td>Resolve suite selectors</td><td><span class="badge badge-ws">WARN</span> suite matched 0 operations</td></tr>
+      <tr><td>7</td><td>Generate suite cases</td><td>pagination / search / enum cases per operation</td></tr>
+      <tr><td>8</td><td>Validate destructive rules</td><td><span class="badge badge-del">ERR</span> flow has DELETE but allowDestructive=false</td></tr>
+      <tr><td>9</td><td>Validate response shapes</td><td><span class="badge badge-ws">WARN</span> listPath undetectable for GET /orders</td></tr>
+      <tr><td>10</td><td>Produce SmokePlan</td><td>Serialisable, storable, diff-able</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">Plan preview response</div>
+    <pre>{
+  "status": "ready" | "errors" | "warnings",
+  "errors": [{"stage": "flow_steps", "path": "flows.user_crud.steps.get_user",
+              "message": "path param id has no source"}],
+  "summary": {
+    "flows": 2, "suites": 1,
+    "totalCases": 134, "destructiveSteps": 0,
+    "skippedOperations": 12, "targetEnvironment": "staging"
+  },
+  "plan": { ... }
+}</pre>
+  </div>
+</div>
+
+<div id="s-runner" class="section">
+  <div class="section-title">Runner</div>
+  <div class="section-sub">Execution-only process — receives compiled plan, returns structured result</div>
+  <div class="card">
+    <div class="card-title">Request composition priority</div>
+    <table>
+      <tr><th>Priority</th><th>Source</th></tr>
+      <tr><td>1 (highest)</td><td>Explicit step / case config</td></tr>
+      <tr><td>2</td><td>Fixtures</td></tr>
+      <tr><td>3</td><td>Environment variables</td></tr>
+      <tr><td>4</td><td>Captured values from prior steps (<code>${steps.login.token}</code>)</td></tr>
+      <tr><td>5</td><td>OpenAPI examples</td></tr>
+      <tr><td>6</td><td>OpenAPI schema-generated values</td></tr>
+      <tr><td>7</td><td>Built-in fake values (uuid, email, etc.)</td></tr>
+      <tr><td>8 (lowest)</td><td>Mark as needs-input, skip with reason</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">WebSocket run event types</div>
+    <pre>type RunEvent struct {
+    Type    string          // "run.started" | "suite.started" | "case.result"
+                           // | "flow.step.result" | "run.finished" | "run.cancelled"
+    Payload json.RawMessage
+}
+
+// case.result payload example:
+{
+  "operationId": "listUsers",
+  "caseKind":    "defaultList",
+  "status":      "passed",
+  "durationMs":  84,
+  "traceId":     "trace_abc"
+}</pre>
+  </div>
+</div>
+
+<div id="s-fe-pages" class="section">
+  <div class="section-title">Svelte Pages</div>
+  <div class="section-sub">SvelteKit file-based routes under <code>src/routes/</code></div>
+  <div class="card">
+    <table>
+      <tr><th>Route</th><th>Page</th><th>Key data</th></tr>
+      <tr><td class="mono">/</td><td>Project list dashboard</td><td>Projects, last run status per project</td></tr>
+      <tr><td class="mono">/projects/[id]/spec</td><td>Spec viewer + operation explorer</td><td>SpecAnalysis, operation registry</td></tr>
+      <tr><td class="mono">/projects/[id]/operations</td><td>Operation override editor</td><td>Registry list, inline kind / shape override</td></tr>
+      <tr><td class="mono">/projects/[id]/environments</td><td>Env + auth profile config</td><td>Environments, auth profiles, secret refs</td></tr>
+      <tr><td class="mono">/projects/[id]/flows/[fid]</td><td>Flow builder</td><td>Step list, operation picker, capture editor</td></tr>
+      <tr><td class="mono">/projects/[id]/suites/[sid]</td><td>Suite configurator</td><td>Selector config, strategies, execution settings</td></tr>
+      <tr><td class="mono">/projects/[id]/plan</td><td>Plan preview</td><td>Compile result, error list, case tree, run button</td></tr>
+      <tr><td class="mono">/runs/[runId]</td><td>Run live view → report</td><td>Live WS events, then full result</td></tr>
+      <tr><td class="mono">/runs/[runId]/report/[view]</td><td>Audience report</td><td>backend / frontend / analyst / qa / ci</td></tr>
+      <tr><td class="mono">/projects/[id]/runs</td><td>Run history</td><td>Paginated run list with trend sparklines</td></tr>
+      <tr><td class="mono">/projects/[id]/settings</td><td>Project settings</td><td>Observability config, retention, templates</td></tr>
+    </table>
+  </div>
+</div>
+
+<div id="s-fe-components" class="section">
+  <div class="section-title">Frontend Components</div>
+  <div class="section-sub">Key reusable components in <code>src/lib/components/</code></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Spec &amp; Operations</div>
+      <ul class="spec-list">
+        <li><code>OperationTable</code> — sortable, filterable with kind badges</li>
+        <li><code>ClassificationOverrideForm</code> — kind, destructive, responseShape</li>
+        <li><code>SpecDiffViewer</code> — before/after on spec import</li>
+        <li><code>AnalysisSummaryCard</code> — operation counts by kind</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">Flow Builder</div>
+      <ul class="spec-list">
+        <li><code>StepList</code> — drag-reorder, add/remove steps</li>
+        <li><code>StepEditor</code> — operation picker, params, body</li>
+        <li><code>CaptureEditor</code> — JSONPath → variable pairs</li>
+        <li><code>FlowDiagramPreview</code> — live Mermaid render</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">Run Viewer</div>
+      <ul class="spec-list">
+        <li><code>LiveEventFeed</code> — WS-driven case result stream</li>
+        <li><code>FlowResultTree</code> — step-by-step expand/collapse</li>
+        <li><code>RequestResponsePanel</code> — redacted headers + body</li>
+        <li><code>TraceContextCard</code> — requestId, traceId, log links</li>
+        <li><code>FailureClassifier</code> — category + state + assignee</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">Reports &amp; History</div>
+      <ul class="spec-list">
+        <li><code>AudienceReportTabs</code> — backend / frontend / analyst / qa</li>
+        <li><code>SequenceDiagram</code> — Mermaid from flow run data</li>
+        <li><code>LatencyChart</code> — per-endpoint bar chart</li>
+        <li><code>RunTrendChart</code> — pass/fail over time</li>
+        <li><code>CommentThread</code> — per-result threaded comments</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div id="s-realtime" class="section">
+  <div class="section-title">Real-time Architecture</div>
+  <div class="section-sub">Live run progress from runner → browser</div>
+  <div class="card">
+    <div class="card-title">Event flow</div>
+    <pre>Runner goroutine
+  → emits RunEvent to channel
+
+API WebSocket handler
+  → reads channel
+  → writes JSON frames to client
+
+SvelteKit page
+  → wraps native WebSocket
+  → feeds Svelte writable store
+  → reactive UI updates per event</pre>
+  </div>
+  <div class="card">
+    <div class="card-title">Svelte store pattern</div>
+    <pre>// src/lib/stores/runEvents.ts
+export function createRunStore(runId: string) {
+  const { subscribe, update } = writable&lt;RunState&gt;(initial)
+  const ws = new WebSocket(`/ws/runs/${runId}`)
+  ws.onmessage = (e) => {
+    const event: RunEvent = JSON.parse(e.data)
+    update(s => applyEvent(s, event))
+  }
+  return { subscribe, close: () => ws.close() }
+}</pre>
+  </div>
+  <div class="card">
+    <div class="card-title">Phase 2 — Redis pub/sub</div>
+    <p style="font-size:13px;color:#6b6b65">For horizontal scaling: replace direct channel with Redis pub/sub. Runner publishes to <code>runs:{id}:events</code>. Each API pod subscribes and fans out to connected WebSocket clients. No frontend code changes required.</p>
+  </div>
+</div>
+
+<div id="s-infra" class="section">
+  <div class="section-title">Infrastructure</div>
+  <div class="section-sub">Dev, staging, and production configuration</div>
+  <div class="card">
+    <div class="card-title">docker-compose.yml (dev)</div>
+    <pre>services:
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: smoketest, POSTGRES_PASSWORD: dev }
+    ports: ["5432:5432"]
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports: ["9000:9000", "9001:9001"]
+
+  api:
+    build: ./apps/api
+    depends_on: [postgres, minio]
+    environment:
+      DATABASE_URL: postgres://postgres:dev@postgres/smoketest
+      MINIO_ENDPOINT: minio:9000
+    ports: ["8080:8080"]
+
+  web:
+    build: ./apps/web
+    environment: { API_URL: http://api:8080 }
+    ports: ["3000:3000"]</pre>
+  </div>
+  <div class="card">
+    <div class="card-title">CI pipeline (GitHub Actions)</div>
+    <pre>test-api:
+  services: { postgres: { image: postgres:16 } }
+  steps:
+    - go test ./... -race -coverprofile=coverage.out
+
+test-web:
+  steps:
+    - pnpm install && pnpm run check && pnpm test
+
+build-images:
+  needs: [test-api, test-web]
+  steps:
+    - docker buildx build --push apps/api
+    - docker buildx build --push apps/web</pre>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">API environment variables</div>
+      <ul class="spec-list">
+        <li><code>DATABASE_URL</code></li>
+        <li><code>MINIO_ENDPOINT</code></li>
+        <li><code>MINIO_ACCESS_KEY</code></li>
+        <li><code>JWT_SECRET</code></li>
+        <li><code>RUNNER_CONCURRENCY</code></li>
+        <li><code>MAX_BODY_STORE_BYTES</code></li>
+        <li><code>RUN_RETENTION_DAYS</code></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">Web environment variables</div>
+      <ul class="spec-list">
+        <li><code>PUBLIC_API_URL</code></li>
+        <li><code>PUBLIC_WS_URL</code></li>
+        <li><code>ORIGIN</code> (SvelteKit CSRF)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div id="s-mvp" class="section">
+  <div class="section-title">MVP Scope</div>
+  <div class="section-sub">What ships first, what ships in phase 2</div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot dot-green"></span>MVP — ship</div>
+      <ul class="spec-list" style="font-size:13px">
+        <li>Project + spec import + analysis</li>
+        <li>Operation registry + overrides</li>
+        <li>Environment + auth profile config</li>
+        <li>Flow builder (steps, captures, assertions)</li>
+        <li>Generated list suite (pagination, search, enums)</li>
+        <li>Compiler + plan preview with errors</li>
+        <li>Cloud runner via River job queue</li>
+        <li>WebSocket live run feed</li>
+        <li>Persistent run result + history</li>
+        <li>Backend debug + CI summary views</li>
+        <li>Request ID / trace extraction</li>
+        <li>Basic Mermaid sequence diagram</li>
+        <li>Run comments</li>
+        <li>JSON + HTML report artifacts</li>
+        <li>Redaction + retention policy</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot dot-amber"></span>Phase 2</div>
+      <ul class="spec-list" style="font-size:13px">
+        <li>Frontend contract view</li>
+        <li>Analyst flow view</li>
+        <li>Run comparison / trend charts</li>
+        <li>Spec diff + impact report on re-import</li>
+        <li>Failure classification + assignees</li>
+        <li>PDF export</li>
+        <li>Scheduled runs (cron)</li>
+        <li>CLI runner binary</li>
+        <li>Private / self-hosted runner</li>
+        <li>Redis pub/sub for horizontal scale</li>
+        <li>Slack / Teams notifications</li>
+        <li>OpenTelemetry deep link integration</li>
+        <li>Role-based access control</li>
+        <li>AI-assisted failure explanation</li>
+        <li>Report template builder UI</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</div>
+</div>
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('s-' + id).classList.add('active');
+  event.target.classList.add('active');
+  document.querySelector('.content').scrollTop = 0;
+}
+</script>
+</body>
+</html>
