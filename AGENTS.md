@@ -561,7 +561,7 @@ Available make targets:
 
 ```text
 make build          Build API server to tmp/server
-make dev            Run API with air hot-reload (watches apps/api)
+make dev            Run API with air hot-reload (watches apps/core)
 make generate       Generate OpenAPI spec + TypeScript types
 make generate-sqlc  Regenerate sqlc queries
 make test           Run Go tests

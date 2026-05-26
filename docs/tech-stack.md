@@ -68,7 +68,7 @@ Future additions (not yet implemented):
 | CI/CD | GitHub Actions | Go build + bun check |
 | Hot reload | `air` | Watches Go source, rebuilds to `tmp/` |
 | Build system | `Makefile` | All dev commands via make targets |
-| Monorepo | bun workspaces | `apps/api`, `apps/web`, `packages/types` |
+| Monorepo | bun workspaces | `apps/core`, `apps/web`, `packages/types` |
 | Type sharing | `openapi-typescript` | Generate TS types from API's OpenAPI spec |
 | Configs | `configs/` dir | docker-compose.yml, .air.toml |
 

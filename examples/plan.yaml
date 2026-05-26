@@ -1,0 +1,20 @@
+id: example-plan-001
+project_id: example
+environment:
+  id: dev
+  name: dev
+  base_url: https://httpbin.org
+  headers: {}
+flow_plans:
+  - flow_id: smoke-flow
+    name: smoke flow
+    steps:
+      - name: get-anything
+        method: GET
+        path: /anything
+        assertions:
+          - type: status
+            expected: 200
+          - type: not_empty
+suite_plans: []
+compiled_at: 2026-05-26T00:00:00Z

@@ -1,4 +1,4 @@
-root = "../../apps/api"
+root = "../../apps/core"
 tmp_dir = "../../tmp"
 
 [build]

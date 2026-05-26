@@ -1,11 +1,21 @@
-.PHONY: dev build test check generate migrate up down clean
+.PHONY: dev build test check generate migrate up down clean build-cli run-cli install-cli
 
 # --- Build ---
-build: build-api
+build: build-api build-cli
 
 build-api:
 	@mkdir -p tmp
-	cd apps/api && go build -o ../../tmp/server ./cmd/server
+	cd apps/core && go build -o ../../tmp/server ./cmd/server
+
+build-cli:
+	@mkdir -p tmp
+	cd apps/core && go build -o ../../tmp/smokery ./cmd/smokery
+
+run-cli: build-cli
+	./tmp/smokery $(ARGS)
+
+install-cli: build-cli
+	cp tmp/smokery $${GOBIN:-$(HOME)/go/bin}/smokery
 
 # --- Dev ---
 dev:
@@ -16,17 +26,17 @@ dev:
 generate: generate-openapi generate-types
 
 generate-openapi:
-	cd apps/api && go run ./cmd/openapi/ ../web/openapi.json
+	cd apps/core && go run ./cmd/openapi/ ../web/openapi.json
 
 generate-types:
 	cd apps/web && bun run generate
 
 generate-sqlc:
-	cd apps/api && sqlc generate
+	cd apps/core && sqlc generate
 
 # --- Test & Check ---
 test:
-	cd apps/api && go test ./...
+	cd apps/core && go test ./...
 
 check:
 	cd apps/web && bun run check
@@ -41,12 +51,12 @@ down:
 	docker compose -f configs/docker-compose.yml down
 
 migrate:
-	cd apps/api && go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
+	cd apps/core && go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest \
 		-path db/migrations -database "$$DATABASE_URL" up
 
 # --- Install ---
 install:
-	cd apps/api && go mod tidy
+	cd apps/core && go mod tidy
 	bun install
 
 # --- Clean ---

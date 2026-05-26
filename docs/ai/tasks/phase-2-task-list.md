@@ -30,7 +30,7 @@ These tasks should be implemented after MVP foundations are stable.
 
 ## Runner and infrastructure
 
-- [ ] CLI runner binary.
+- [x] CLI runner binary (shipped in Phase B as `cmd/smokery`).
 - [ ] Private/self-hosted runner mode.
 - [ ] Runner registration tokens.
 - [ ] Scheduled smoke runs.

@@ -280,10 +280,11 @@ export interface components {
             version: string;
         };
         Artifact: {
-            created_at: components["schemas"]["Timestamptz"];
-            id: components["schemas"]["UUID"];
+            /** Format: date-time */
+            created_at: string;
+            id: string;
             path: string;
-            run_id: components["schemas"]["UUID"];
+            run_id: string;
             type: string;
         };
         Assertion: {
@@ -331,9 +332,10 @@ export interface components {
             readonly $schema?: string;
             author: string;
             body: string;
-            created_at: components["schemas"]["Timestamptz"];
-            id: components["schemas"]["UUID"];
-            run_id: components["schemas"]["UUID"];
+            /** Format: date-time */
+            created_at: string;
+            id: string;
+            run_id: string;
         };
         CreateCommentInputBody: {
             /**
@@ -475,16 +477,17 @@ export interface components {
              */
             readonly $schema?: string;
             classification: string;
-            created_at: components["schemas"]["Timestamptz"];
-            id: components["schemas"]["UUID"];
+            /** Format: date-time */
+            created_at: string;
+            id: string;
             is_destructive: boolean;
             method: string;
             operation_id: string;
             overrides: string;
             path: string;
-            spec_id: components["schemas"]["UUID"];
+            spec_id: string;
             summary: string;
-            tags: string;
+            tags: string[] | null;
         };
         OperationInfo: {
             classification: string;
@@ -521,11 +524,13 @@ export interface components {
              * @example http://localhost:8080/schemas/Project.json
              */
             readonly $schema?: string;
-            created_at: components["schemas"]["Timestamptz"];
+            /** Format: date-time */
+            created_at: string;
             description: string;
-            id: components["schemas"]["UUID"];
+            id: string;
             name: string;
-            updated_at: components["schemas"]["Timestamptz"];
+            /** Format: date-time */
+            updated_at: string;
         };
         Run: {
             /**
@@ -534,25 +539,16 @@ export interface components {
              * @example http://localhost:8080/schemas/Run.json
              */
             readonly $schema?: string;
-            created_at: components["schemas"]["Timestamptz"];
-            finished_at: components["schemas"]["Timestamptz"];
-            id: components["schemas"]["UUID"];
-            plan_id: components["schemas"]["UUID"];
-            project_id: components["schemas"]["UUID"];
-            started_at: components["schemas"]["Timestamptz"];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            finished_at?: string;
+            id: string;
+            plan_id?: string;
+            project_id: string;
+            /** Format: date-time */
+            started_at?: string;
             status: string;
-        };
-        RunResult: {
-            /**
-             * Format: uri
-             * @description A URL to the JSON Schema for this object.
-             * @example http://localhost:8080/schemas/RunResult.json
-             */
-            readonly $schema?: string;
-            created_at: components["schemas"]["Timestamptz"];
-            id: components["schemas"]["UUID"];
-            result: string;
-            run_id: components["schemas"]["UUID"];
         };
         SmokePlan: {
             auth?: components["schemas"]["AuthProfile"];
@@ -564,26 +560,28 @@ export interface components {
             project_id: string;
             suite_plans?: components["schemas"]["SuitePlan"][] | null;
         };
+        StoredRunResult: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/StoredRunResult.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created_at: string;
+            id: string;
+            result: string;
+            run_id: string;
+        };
         SuitePlan: {
             cases: components["schemas"]["PlannedCase"][] | null;
             name: string;
             suite_id: string;
         };
-        Timestamptz: {
-            /** Format: int32 */
-            InfinityModifier: number;
-            /** Format: date-time */
-            Time: string;
-            Valid: boolean;
-        };
         TraceInfo: {
             request_id?: string;
             step: string;
             trace_id?: string;
-        };
-        UUID: {
-            Bytes: string;
-            Valid: boolean;
         };
         UpdateClassificationInputBody: {
             /**
@@ -1200,7 +1198,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunResult"];
+                    "application/json": components["schemas"]["StoredRunResult"];
                 };
             };
             /** @description Error */
