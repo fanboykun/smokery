@@ -1,25 +1,12 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { createQuery } from '@tanstack/svelte-query';
-  import { api } from '$lib/api/client';
   import { demoOperations, type OperationSummary } from '$lib/demo-data';
 
   let filter = $state('');
   let selectedId = $state(demoOperations[0]?.id ?? '');
-  let overrideJson = $state('{\n  "custom_headers": {\n    "X-Test": "true"\n  }\n}');
+  let overrideJson = $state('{\n  "headers": {\n    "X-Smoke-Test": "true"\n  }\n}');
 
-  const specs = createQuery(() => ({
-    queryKey: ['project-specs', $page.params.id],
-    queryFn: async () => {
-      const { data, error } = await api.GET('/api/projects/{id}/specs', {
-        params: { path: { id: $page.params.id! } },
-      });
-      if (error) throw error;
-      return data!;
-    },
-  }));
-
-  const operations = $derived<OperationSummary[]>(demoOperations);
+  const operations = $derived(demoOperations satisfies OperationSummary[]);
   const filtered = $derived(
     operations.filter((operation) => {
       const needle = filter.toLowerCase().trim();
@@ -49,12 +36,12 @@
     </div>
   </section>
 
-  {#if specs.isError}
-    <article class="card card-subtle" style="margin-bottom: 1rem;">
-      <span class="badge badge-warning">Spec demo mode</span>
-      <p class="muted" style="margin: 0.75rem 0 0;">The API spec endpoint is not available yet, so this page uses seeded operations while preserving the final data shape.</p>
-    </article>
-  {/if}
+  <article class="card card-subtle" style="margin-bottom: 1rem;">
+    <span class="badge badge-warning">Spec wiring pending</span>
+    <p class="muted" style="margin: 0.75rem 0 0;">
+      The generated client exposes operations by spec ID. This page is scaffolded with typed demo operations until the project overview exposes the active spec ID.
+    </p>
+  </article>
 
   <section class="grid grid-2">
     <article class="card section-stack">
@@ -81,7 +68,7 @@
                   <span class="muted">{operation.id}</span>
                   <span class="badge">{operation.classification}</span>
                   {#if operation.destructive}
-                    <span class="badge badge-warning">⚠ destr</span>
+                    <span class="badge badge-warning">⚠ protected</span>
                   {:else}
                     <span class="badge badge-success">safe</span>
                   {/if}
@@ -99,7 +86,7 @@
           <span class="method {selected.method.toLowerCase()}">{selected.method}</span>
           <h2 style="margin: 0;">{selected.id}</h2>
           {#if selected.destructive}
-            <span class="badge badge-warning">destructive blocked by default</span>
+            <span class="badge badge-warning">compiler approval required</span>
           {:else}
             <span class="badge badge-success">safe operation</span>
           {/if}
