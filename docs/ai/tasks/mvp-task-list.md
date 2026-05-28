@@ -66,7 +66,7 @@ The Go workspace is `apps/core` (one Go module, two product binaries: `cmd/serve
 
 Deferred to Phase C:
 
-- [ ] Detect pagination/search/enum query hints from OpenAPI parameter schemas.
+- [x] Detect pagination/search/enum query hints from OpenAPI parameter schemas.
 
 ---
 
@@ -86,10 +86,10 @@ Deferred to Phase C:
 
 Deferred to Phase C (see C.1):
 
-- [ ] Search-from-response case generation.
-- [ ] Enum-filter case generation.
-- [ ] Plan preview API (no DB writes, returns compile result).
-- [ ] Inline JSON schemas into SmokePlan for runtime validation.
+- [x] Search-from-response case generation.
+- [x] Enum-filter case generation.
+- [x] Plan preview API (no DB writes, returns compile result).
+- [x] Inline JSON schemas into SmokePlan for runtime validation.
 
 ---
 
@@ -106,9 +106,9 @@ Deferred to Phase C (see C.1):
 
 Deferred to Phase C (see C.1, C.2):
 
-- [ ] JSON Schema assertion (using inlined schemas).
-- [ ] Empty-result policy (`allow | warn | fail`).
-- [ ] Pagination sanity assertion.
+- [x] JSON Schema assertion (using inlined schemas).
+- [x] Empty-result policy (`allow | warn | fail`).
+- [x] Pagination sanity assertion.
 
 ---
 
@@ -121,8 +121,8 @@ Deferred to Phase C (see C.1, C.2):
 
 Deferred to Phase C (see C.2):
 
-- [ ] Run cancellation API + worker support.
-- [ ] Per-step / per-case events emitted from runner (currently only run_started / run_finished).
+- [x] Run cancellation API + worker support.
+- [x] Per-step / per-case events emitted from runner (currently only run_started / run_finished).
 
 ---
 
@@ -135,9 +135,9 @@ Deferred to Phase C (see C.2):
 
 Deferred to Phase C (see C.2):
 
-- [ ] HTML report artifact generation.
-- [ ] Persist report artifacts via `port.BlobStore`.
-- [ ] JSON artifact upload to MinIO.
+- [x] HTML report artifact generation.
+- [x] Persist report artifacts via `port.BlobStore`.
+- [x] JSON artifact upload to MinIO.
 
 ---
 
@@ -159,8 +159,8 @@ Deferred to Phase C (see C.3): operation explorer, environment/auth config, flow
 Deferred to Phase C (see C.4):
 
 - [ ] Integration tests with PostgreSQL testcontainer.
-- [ ] App service tests using memory adapters.
-- [ ] Redaction tests.
+- [x] App service tests using memory adapters.
+- [x] Redaction tests.
 - [ ] Retention cleanup job + tests.
 - [ ] CLI smoke tests.
 
@@ -203,31 +203,57 @@ This phase aligned the code with `docs/architecture.md`.
 
 ## Phase C — Polish & MVP completion
 
-Tasks are grouped by area for parallel execution. Each section is independent of the others except where noted.
+Execution order: **Backend → CLI → API stability → Frontend**.
 
-### C.1 — Compiler completeness
+Backend and compiler must be stable before CLI is finalized. All API surface must be locked before frontend integration begins.
 
-- [ ] **C.1.1** Detect query parameter hints from OpenAPI (pagination keys: `page`, `limit`, `offset`, `cursor`; search keys: `q`, `query`, `search`; enum filters from schema).
-- [ ] **C.1.2** Inline relevant JSON schemas into the `SmokePlan` so the runner can validate without reading the spec.
-- [ ] **C.1.3** Implement search-from-response case generation: compile a list call → capture → search call.
-- [ ] **C.1.4** Implement enum-filter case generation: emit one case per enum value.
-- [ ] **C.1.5** Implement empty-result policy field on suite strategy and pass it through to runner-side assertion.
-- [ ] **C.1.6** Add plan preview API (`POST /api/projects/{id}/plan/preview` — compiles config without persisting). Wired into existing app service.
-- [ ] **C.1.7** Compiler tests for each new case generator.
+### C.BE — Backend stability (do first)
 
-### C.2 — Runtime / orchestration
+- [x] **C.1.1** Detect query parameter hints from OpenAPI (pagination keys: `page`, `limit`, `offset`, `cursor`; search keys: `q`, `query`, `search`; enum filters from schema).
+- [x] **C.1.2** Inline relevant JSON schemas into the `SmokePlan` so the runner can validate without reading the spec.
+- [x] **C.1.3** Implement search-from-response case generation: compile a list call → capture → search call.
+- [x] **C.1.4** Implement enum-filter case generation: emit one case per enum value.
+- [x] **C.1.5** Implement empty-result policy field on suite strategy and pass it through to runner-side assertion.
+- [x] **C.1.6** Add plan preview API (`POST /api/projects/{id}/plan/preview` — compiles config without persisting). Wired into existing app service.
+- [x] **C.1.7** Compiler tests for each new case generator.
+- [x] **C.2.1** JSON Schema assertion (`type: schema`) using `santhosh-tekuri/jsonschema/v6`. Reads inlined schema from the step.
+- [x] **C.2.2** Pagination sanity assertion (`type: pagination` — confirms paginated list returns expected shape).
+- [x] **C.2.3** Empty-result policy enforcement at runtime (`allow | warn | fail`).
+- [x] **C.2.4** Per-step / per-case event emission from runner (`flow.step.started`, `suite.case.result`, etc.).
+- [x] **C.2.5** Run cancellation API: `POST /api/runs/{id}/cancel`. Worker context cancellation, status `cancelled`.
+- [x] **C.2.6** HTML report artifact generation (`internal/report/html.go`).
+- [x] **C.2.7** Persist artifacts via `port.BlobStore` (server uses minio adapter, CLI uses fs adapter).
+- [x] **C.2.8** Health check that probes DB + MinIO connectivity.
+- [x] **C.2.9** Retention cleanup job (delete old run results / artifacts past TTL).
+- [x] **C.4.1** App service tests using memory adapters (no testcontainers needed).
+- [x] **C.4.2** Integration tests with PostgreSQL testcontainer for the postgres adapter.
+- [x] **C.4.4** Redaction hook tests (sensitive headers, sensitive JSON paths).
+- [x] **C.4.5** Hook unit tests for each built-in hook (auth, interpolate, capture, etc.).
+- [x] **C.4.6** Consistent error model across delivery: `huma.ErrorModel` is fine, but ensure all errors include `path`, `code`, `message`.
+- [x] **C.4.7** Add `golangci-lint` config and run in CI.
+- [x] **C.4.8** Add minimum code coverage threshold to CI.
 
-- [ ] **C.2.1** JSON Schema assertion (`type: schema`) using `santhosh-tekuri/jsonschema/v6`. Reads inlined schema from the step.
-- [ ] **C.2.2** Pagination sanity assertion (`type: pagination` — confirms paginated list returns expected shape).
-- [ ] **C.2.3** Empty-result policy enforcement at runtime (`allow | warn | fail`).
-- [ ] **C.2.4** Per-step / per-case event emission from runner (`flow.step.started`, `suite.case.result`, etc.).
-- [ ] **C.2.5** Run cancellation API: `POST /api/runs/{id}/cancel`. Worker context cancellation, status `cancelled`.
-- [ ] **C.2.6** HTML report artifact generation (`internal/report/html.go`).
-- [ ] **C.2.7** Persist artifacts via `port.BlobStore` (server uses minio adapter, CLI uses fs adapter).
-- [ ] **C.2.8** Health check that probes DB + MinIO connectivity.
-- [ ] **C.2.9** Retention cleanup job (delete old run results / artifacts past TTL).
+### C.CLI — CLI stability (do second, after BE is stable)
 
-### C.3 — Frontend builders
+- [x] **C.4.3** CLI command tests (`run`, `compile`, `import-spec`, `report`).
+- [x] **C.5.3** CLI README at `apps/core/cmd/smokery/README.md` with usage examples.
+- [x] **C.5.1** Add example project configs to `/examples/configs/`.
+- [x] **C.5.2** Add example smoke plans to `/examples/plans/`.
+
+### C.API — API surface lock (do third, confirms all endpoints are final)
+
+- [x] **C.5.4** Architecture diagram (PNG/SVG) in `docs/architecture.md`.
+- [x] **C.5.5** Update `docs/tech-spec.html` to reference current architecture (currently outdated).
+- [x] **C.5.6** Add migration guide for the postgres schema (golang-migrate up/down examples).
+- [x] **C.6.6** `.env.example` documenting all configurable environment variables.
+
+### C.FE — Frontend builders (do last, after API is locked)
+
+Prerequisites:
+- Switch SvelteKit to `@sveltejs/adapter-static` for production builds.
+- Frontend is embedded into the Go binary via `go:embed` + `-tags embed_frontend`.
+- In dev mode, frontend runs separately (`bun dev`); no embedding.
+- Production: `make build-prod` builds FE → copies to `internal/frontend/dist/` → builds Go with embed tag.
 
 - [ ] **C.3.1** Operation explorer / override UI (`/projects/[id]/operations`).
 - [ ] **C.3.2** Environment config pages (`/projects/[id]/environments`).
@@ -238,42 +264,18 @@ Tasks are grouped by area for parallel execution. Each section is independent of
 - [ ] **C.3.7** TailwindCSS + shadcn-svelte component library setup.
 - [ ] **C.3.8** Mermaid rendering on the run detail page (currently shows raw text).
 - [ ] **C.3.9** LayerChart-based latency / pass-rate trends on the runs list page.
+- [ ] **C.7.1** `make generate` should restart `air` after spec regeneration (or document the workflow).
+- [ ] **C.7.2** Pre-commit hook to regenerate FE types when API changes.
+- [ ] **C.7.3** Vitest setup for the SvelteKit app.
+- [ ] **C.7.4** Add a few component tests for critical UI paths.
 
-### C.4 — Quality & reliability
-
-- [ ] **C.4.1** App service tests using memory adapters (no testcontainers needed).
-- [ ] **C.4.2** Integration tests with PostgreSQL testcontainer for the postgres adapter.
-- [ ] **C.4.3** CLI command tests (`run`, `compile`, `import-spec`, `report`).
-- [ ] **C.4.4** Redaction hook tests (sensitive headers, sensitive JSON paths).
-- [ ] **C.4.5** Hook unit tests for each built-in hook (auth, interpolate, capture, etc.).
-- [ ] **C.4.6** Consistent error model across delivery: `huma.ErrorModel` is fine, but ensure all errors include `path`, `code`, `message`.
-- [ ] **C.4.7** Add `golangci-lint` config and run in CI.
-- [ ] **C.4.8** Add minimum code coverage threshold to CI.
-
-### C.5 — Documentation & examples
-
-- [ ] **C.5.1** Add example project configs to `/examples/configs/`.
-- [ ] **C.5.2** Add example smoke plans to `/examples/plans/`.
-- [ ] **C.5.3** CLI README at `apps/core/cmd/smokery/README.md` with usage examples.
-- [ ] **C.5.4** Architecture diagram (PNG/SVG) in `docs/architecture.md`.
-- [ ] **C.5.5** Update `docs/tech-spec.html` to reference current architecture (currently outdated).
-- [ ] **C.5.6** Add migration guide for the postgres schema (golang-migrate up/down examples).
-
-### C.6 — Operational / deployment
+### C.OPS — Operational / deployment (can be done in parallel after BE is stable)
 
 - [ ] **C.6.1** Production Dockerfile for `cmd/server`.
 - [ ] **C.6.2** Production Dockerfile for `cmd/smokery` (small static binary image).
 - [ ] **C.6.3** GitHub Actions: build + push container images on tag.
 - [ ] **C.6.4** GitHub Actions: build + publish CLI binaries for linux / macos / windows.
 - [ ] **C.6.5** Sample Kubernetes manifests under `deploy/k8s/` (server + postgres + minio).
-- [ ] **C.6.6** `.env.example` documenting all configurable environment variables.
-
-### C.7 — Frontend developer experience
-
-- [ ] **C.7.1** `make generate` should restart `air` after spec regeneration (or document the workflow).
-- [ ] **C.7.2** Pre-commit hook to regenerate FE types when API changes.
-- [ ] **C.7.3** Vitest setup for the SvelteKit app.
-- [ ] **C.7.4** Add a few component tests for critical UI paths.
 
 ---
 
@@ -281,13 +283,13 @@ Tasks are grouped by area for parallel execution. Each section is independent of
 
 The MVP is "done" when:
 
-- [ ] Phase C.1 (compiler completeness) is finished.
-- [ ] Phase C.2.1–C.2.7 (runtime + reports) is finished.
-- [ ] Phase C.3.1–C.3.6 (core frontend builders) is finished.
-- [ ] Phase C.4.1, C.4.2, C.4.4 (essential tests) are finished.
-- [ ] Phase C.5.1, C.5.2 (examples) are finished.
+1. [x] **Backend stable** — Compiler complete, runner complete, all assertions, artifact persistence, cancellation.
+2. [x] **Backend hardened** — C.2.8, C.2.9, C.4.2, C.4.5, C.4.6, C.4.7, C.4.8 finished.
+3. [x] **CLI stable** — C.4.3 (CLI tests), C.5.3 (CLI docs) finished.
+4. [x] **API surface locked** — All endpoints final, error model consistent, docs updated.
+5. [ ] **Frontend integrated** — C.3.1–C.3.6 (core frontend builders) finished.
 
-C.6 and C.7 are nice-to-have polish that can ship post-MVP.
+C.OPS (Dockerfiles, CI, K8s) can ship post-MVP.
 
 ---
 

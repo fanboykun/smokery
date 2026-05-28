@@ -11,10 +11,13 @@ import (
 	"github.com/fanboykun/smokery/apps/core/internal/port"
 )
 
-type ArtifactRepo struct{ q *db.Queries }
+type ArtifactRepo struct {
+	q    *db.Queries
+	pool *pgxpool.Pool
+}
 
 func NewArtifactRepo(pool *pgxpool.Pool) *ArtifactRepo {
-	return &ArtifactRepo{q: db.New(pool)}
+	return &ArtifactRepo{q: db.New(pool), pool: pool}
 }
 
 var _ port.ArtifactRepo = (*ArtifactRepo)(nil)
@@ -51,4 +54,16 @@ func artifactToModel(a db.Artifact) *model.Artifact {
 		Path:      a.Path,
 		CreatedAt: fromPgTimestamptz(a.CreatedAt),
 	}
+}
+
+func (r *ArtifactRepo) DeleteByRun(ctx context.Context, runID uuid.UUID) ([]model.Artifact, error) {
+	arts, err := r.ListByRun(ctx, runID)
+	if err != nil {
+		return nil, err
+	}
+	_, err = r.pool.Exec(ctx, "DELETE FROM artifacts WHERE run_id = $1", toPgUUID(runID))
+	if err != nil {
+		return nil, err
+	}
+	return arts, nil
 }

@@ -25,14 +25,6 @@ type SpecIDParam struct {
 	SpecID string `path:"spec-id" format:"uuid" doc:"Spec UUID"`
 }
 
-// --- Health ---
-
-type HealthOutput struct {
-	Body struct {
-		Status string `json:"status" example:"ok" doc:"Service health status"`
-	}
-}
-
 // --- Projects ---
 
 type CreateProjectInput struct {

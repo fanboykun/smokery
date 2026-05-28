@@ -35,3 +35,16 @@ func (r *ArtifactRepo) ListByRun(_ context.Context, runID uuid.UUID) ([]model.Ar
 	}
 	return out, nil
 }
+
+func (r *ArtifactRepo) DeleteByRun(_ context.Context, runID uuid.UUID) ([]model.Artifact, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var deleted []model.Artifact
+	for id, a := range r.s.artifacts {
+		if a.RunID == runID {
+			deleted = append(deleted, a)
+			delete(r.s.artifacts, id)
+		}
+	}
+	return deleted, nil
+}

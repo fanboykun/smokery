@@ -66,3 +66,9 @@ func (s *BlobStore) SignedURL(ctx context.Context, key string, ttl time.Duration
 	}
 	return u.String(), nil
 }
+
+// Ping checks MinIO connectivity by verifying the bucket exists.
+func (s *BlobStore) Ping(ctx context.Context) error {
+	_, err := s.client.BucketExists(ctx, s.bucket)
+	return err
+}

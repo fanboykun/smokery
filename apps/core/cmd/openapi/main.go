@@ -38,7 +38,7 @@ func main() {
 	commentSvc := app.NewCommentService(noopCommentRepo{})
 	artifactSvc := app.NewArtifactService(noopArtifactRepo{})
 
-	deliveryhttp.RegisterHealth(api)
+	deliveryhttp.RegisterHealthCheck(api, noopHealthChecker{})
 	deliveryhttp.RegisterProjects(api, projectSvc)
 	deliveryhttp.RegisterSpecs(api, specSvc)
 	deliveryhttp.RegisterOperations(api, operationSvc)
@@ -46,6 +46,7 @@ func main() {
 	deliveryhttp.RegisterReports(api, reportSvc)
 	deliveryhttp.RegisterComments(api, commentSvc)
 	deliveryhttp.RegisterArtifacts(api, artifactSvc)
+	deliveryhttp.RegisterPlan(api, app.NewPlanService(noopSpecRepo{}, noopOperationRepo{}))
 
 	b, _ := json.MarshalIndent(api.OpenAPI(), "", "  ")
 	if len(os.Args) > 1 {
@@ -107,6 +108,7 @@ func (noopRunRepo) SaveResult(context.Context, uuid.UUID, []byte) (*model.Stored
 func (noopRunRepo) GetResult(context.Context, uuid.UUID) (*model.StoredRunResult, error) {
 	return nil, nil
 }
+func (noopRunRepo) DeleteOlderThan(context.Context, time.Time) (int, error) { return 0, nil }
 
 type noopCommentRepo struct{}
 
@@ -125,10 +127,19 @@ func (noopArtifactRepo) Create(context.Context, uuid.UUID, string, string) (*mod
 func (noopArtifactRepo) ListByRun(context.Context, uuid.UUID) ([]model.Artifact, error) {
 	return nil, nil
 }
+func (noopArtifactRepo) DeleteByRun(context.Context, uuid.UUID) ([]model.Artifact, error) {
+	return nil, nil
+}
 
 type noopJobs struct{}
 
 func (noopJobs) EnqueueRun(context.Context, uuid.UUID, *model.SmokePlan) error { return nil }
+func (noopJobs) CancelRun(context.Context, uuid.UUID) error                    { return nil }
+
+type noopHealthChecker struct{}
+
+func (noopHealthChecker) PingDB(context.Context) error   { return nil }
+func (noopHealthChecker) PingBlob(context.Context) error { return nil }
 
 // Compile-time interface checks
 var (
@@ -139,4 +150,5 @@ var (
 	_ port.CommentRepo   = noopCommentRepo{}
 	_ port.ArtifactRepo  = noopArtifactRepo{}
 	_ port.JobEnqueuer   = noopJobs{}
+	_ deliveryhttp.HealthChecker = noopHealthChecker{}
 )

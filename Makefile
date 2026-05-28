@@ -1,4 +1,4 @@
-.PHONY: dev build test check generate migrate up down clean build-cli run-cli install-cli
+.PHONY: dev build test check generate migrate up down clean build-cli run-cli install-cli build-prod
 
 # --- Build ---
 build: build-api build-cli
@@ -10,6 +10,14 @@ build-api:
 build-cli:
 	@mkdir -p tmp
 	cd apps/core && go build -o ../../tmp/smokery ./cmd/smokery
+
+# Production build: embeds the frontend static site into the server binary.
+# Requires: cd apps/web && bun run build (outputs to apps/core/internal/frontend/dist/)
+build-prod:
+	@mkdir -p tmp
+	cd apps/web && bun run build
+	cp -r apps/web/build/* apps/core/internal/frontend/dist/
+	cd apps/core && go build -tags embed_frontend -o ../../tmp/server ./cmd/server
 
 run-cli: build-cli
 	./tmp/smokery $(ARGS)
@@ -38,10 +46,16 @@ generate-sqlc:
 test:
 	cd apps/core && go test ./...
 
+test-integration:
+	cd apps/core && go test -tags integration ./internal/adapter/postgres/ -v -count=1
+
 check:
 	cd apps/web && bun run check
 
 lint: test check
+
+lint-go:
+	cd apps/core && golangci-lint run ./...
 
 # --- Database ---
 up:

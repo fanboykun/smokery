@@ -1,0 +1,92 @@
+# Example: Petstore API smoke test configuration
+#
+# This config demonstrates a basic flow-based smoke test against a Petstore API.
+# Use with: smokery compile --config examples/configs/petstore.yaml --spec <spec-file>
+
+environments:
+  - id: local
+    name: Local Development
+    base_url: http://localhost:3000
+    headers:
+      X-Request-Source: smokery
+
+auth_profiles:
+  - id: admin
+    name: Admin Bearer Token
+    type: bearer
+    config:
+      token: "{{ADMIN_TOKEN}}"
+
+flows:
+  - id: pet-lifecycle
+    name: Pet CRUD Lifecycle
+    description: Create, read, update, and delete a pet
+    environment: local
+    auth: admin
+    steps:
+      - name: create-pet
+        operation_id: addPet
+        body:
+          name: "Smoke Test Dog"
+          status: available
+          category:
+            id: 1
+            name: Dogs
+        assertions:
+          - type: status
+            expected: 201
+        captures:
+          - name: pet_id
+            source: body
+            path: id
+
+      - name: get-pet
+        operation_id: getPetById
+        params:
+          petId: "{{pet_id}}"
+        assertions:
+          - type: status
+            expected: 200
+          - type: jsonpath
+            path: name
+            expected: "Smoke Test Dog"
+
+      - name: update-pet
+        operation_id: updatePet
+        body:
+          id: "{{pet_id}}"
+          name: "Updated Smoke Dog"
+          status: sold
+        assertions:
+          - type: status
+            expected: 200
+
+      - name: verify-update
+        operation_id: getPetById
+        params:
+          petId: "{{pet_id}}"
+        assertions:
+          - type: status
+            expected: 200
+          - type: jsonpath
+            path: status
+            expected: sold
+
+    cleanup:
+      - name: delete-pet
+        operation_id: deletePet
+        params:
+          petId: "{{pet_id}}"
+
+suites:
+  - id: list-endpoints
+    name: List Endpoint Smoke
+    description: Verify all list endpoints return valid responses
+    environment: local
+    selector:
+      classifications:
+        - list
+    strategy:
+      default_list: true
+      pagination: true
+      empty_result_policy: warn

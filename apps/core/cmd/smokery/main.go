@@ -23,6 +23,7 @@ import (
 type noopJobs struct{}
 
 func (noopJobs) EnqueueRun(context.Context, uuid.UUID, *model.SmokePlan) error { return nil }
+func (noopJobs) CancelRun(context.Context, uuid.UUID) error                    { return nil }
 
 var _ port.JobEnqueuer = noopJobs{}
 

@@ -103,6 +103,7 @@ func compileFlow(flow model.Flow, cfg model.ProjectConfig, opMap map[string]spec
 			Name: s.Name, Method: op.Method, Path: op.Path,
 			Params: s.Params, Body: s.Body, Headers: s.Headers,
 			Captures: s.Captures, Assertions: s.Assertions,
+			ResponseSchema: op.ResponseSchema,
 		})
 	}
 
@@ -146,22 +147,100 @@ func compileSuite(suite model.Suite, cfg model.ProjectConfig, allOps []spec.Oper
 			cases = append(cases, model.PlannedCase{
 				OperationID: op.OperationID, CaseType: "default_list",
 				Step: model.PlannedStep{Name: op.OperationID + "_default", Method: op.Method, Path: op.Path,
-					Assertions: []model.Assertion{{Type: "status", Expected: 200}},
+					Assertions:     []model.Assertion{{Type: "status", Expected: 200}},
+					ResponseSchema: op.ResponseSchema,
 				},
 			})
 		}
 		if suite.Strategy.Pagination && op.Classification == "list" {
+			paginationParams := map[string]any{"page": 1, "limit": 10}
+			// Use detected pagination keys if available
+			if len(op.QueryHints.PaginationParams) > 0 {
+				paginationParams = make(map[string]any)
+				for _, p := range op.QueryHints.PaginationParams {
+					switch p {
+					case "page":
+						paginationParams[p] = 1
+					case "cursor":
+						paginationParams[p] = ""
+					default:
+						paginationParams[p] = 10
+					}
+				}
+			}
 			cases = append(cases, model.PlannedCase{
 				OperationID: op.OperationID, CaseType: "pagination",
 				Step: model.PlannedStep{Name: op.OperationID + "_pagination", Method: op.Method, Path: op.Path,
-					Params:     map[string]any{"page": 1, "limit": 10},
-					Assertions: []model.Assertion{{Type: "status", Expected: 200}, {Type: "list_shape"}},
+					Params:         paginationParams,
+					Assertions:     []model.Assertion{{Type: "status", Expected: 200}, {Type: "list_shape"}},
+					ResponseSchema: op.ResponseSchema,
 				},
 			})
+		}
+		if suite.Strategy.SearchFromResponse && op.Classification == "list" && len(op.QueryHints.SearchParams) > 0 {
+			cases = append(cases, generateSearchCase(op))
+		}
+		if suite.Strategy.EnumFilters && len(op.QueryHints.EnumFilters) > 0 {
+			cases = append(cases, generateEnumCases(op, suite.Strategy.MaxCasesPerOp)...)
+		}
+	}
+
+	// Apply empty result policy
+	if suite.Strategy.EmptyResultPolicy != "" {
+		for i := range cases {
+			cases[i].EmptyResultPolicy = suite.Strategy.EmptyResultPolicy
 		}
 	}
 
 	return &model.SuitePlan{SuiteID: suite.ID, Name: suite.Name, Cases: cases}, errors, warnings
+}
+
+func generateSearchCase(op spec.OperationInfo) model.PlannedCase {
+	searchParam := op.QueryHints.SearchParams[0]
+	// Step 1: list call to capture a value from the first item
+	listStep := model.PlannedStep{
+		Name:   op.OperationID + "_search_setup",
+		Method: op.Method, Path: op.Path,
+		Assertions: []model.Assertion{{Type: "status", Expected: 200}},
+		Captures: []model.Capture{{
+			Name: "search_term", Source: "body", Path: "0.name|data.0.name|items.0.name|results.0.name",
+		}},
+	}
+	// Step 2: search call using captured value
+	searchStep := model.PlannedStep{
+		Name:   op.OperationID + "_search",
+		Method: op.Method, Path: op.Path,
+		Params:         map[string]any{searchParam: "{{search_term}}"},
+		Assertions:     []model.Assertion{{Type: "status", Expected: 200}, {Type: "list_shape"}},
+		ResponseSchema: op.ResponseSchema,
+	}
+	return model.PlannedCase{
+		OperationID: op.OperationID, CaseType: "search",
+		Steps: []model.PlannedStep{listStep, searchStep},
+	}
+}
+
+func generateEnumCases(op spec.OperationInfo, maxPerOp int) []model.PlannedCase {
+	var cases []model.PlannedCase
+	for _, ef := range op.QueryHints.EnumFilters {
+		for _, val := range ef.Values {
+			cases = append(cases, model.PlannedCase{
+				OperationID: op.OperationID, CaseType: "enum_filter",
+				Step: model.PlannedStep{
+					Name:           fmt.Sprintf("%s_filter_%s_%s", op.OperationID, ef.Name, val),
+					Method:         op.Method,
+					Path:           op.Path,
+					Params:         map[string]any{ef.Name: val},
+					Assertions:     []model.Assertion{{Type: "status", Expected: 200}},
+					ResponseSchema: op.ResponseSchema,
+				},
+			})
+			if maxPerOp > 0 && len(cases) >= maxPerOp {
+				return cases
+			}
+		}
+	}
+	return cases
 }
 
 func selectOperations(ops []spec.OperationInfo, sel model.SuiteSelector) []spec.OperationInfo {

@@ -37,6 +37,7 @@ type RunRepo interface {
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, startedAt, finishedAt *time.Time) (*model.Run, error)
 	SaveResult(ctx context.Context, runID uuid.UUID, result []byte) (*model.StoredRunResult, error)
 	GetResult(ctx context.Context, runID uuid.UUID) (*model.StoredRunResult, error)
+	DeleteOlderThan(ctx context.Context, before time.Time) (int, error)
 }
 
 type CommentRepo interface {
@@ -47,4 +48,5 @@ type CommentRepo interface {
 type ArtifactRepo interface {
 	Create(ctx context.Context, runID uuid.UUID, typ, path string) (*model.Artifact, error)
 	ListByRun(ctx context.Context, runID uuid.UUID) ([]model.Artifact, error)
+	DeleteByRun(ctx context.Context, runID uuid.UUID) ([]model.Artifact, error)
 }

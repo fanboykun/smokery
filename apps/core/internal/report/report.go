@@ -110,14 +110,14 @@ func GenerateMermaidDiagram(result *model.RunResult) string {
 	sb.WriteString("    participant Client\n")
 	sb.WriteString("    participant API\n")
 	for _, f := range result.Flows {
-		sb.WriteString(fmt.Sprintf("    Note over Client,API: Flow: %s\n", f.Name))
+		fmt.Fprintf(&sb, "    Note over Client,API: Flow: %s\n", f.Name)
 		for _, s := range f.Steps {
 			arrow := "->>"
 			if s.Status != "passed" {
 				arrow = "-x"
 			}
-			sb.WriteString(fmt.Sprintf("    Client%sAPI: %s %s\n", arrow, s.Request.Method, s.Name))
-			sb.WriteString(fmt.Sprintf("    API-->>Client: %d\n", s.Response.Status))
+			fmt.Fprintf(&sb, "    Client%sAPI: %s %s\n", arrow, s.Request.Method, s.Name)
+			fmt.Fprintf(&sb, "    API-->>Client: %d\n", s.Response.Status)
 		}
 	}
 	return sb.String()

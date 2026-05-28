@@ -35,6 +35,13 @@ func (s *RunService) Start(ctx context.Context, in StartRunInput) (*model.Run, e
 	return run, nil
 }
 
+func (s *RunService) Cancel(ctx context.Context, id uuid.UUID) (*model.Run, error) {
+	if err := s.jobs.CancelRun(ctx, id); err != nil {
+		return nil, err
+	}
+	return s.runs.Get(ctx, id)
+}
+
 func (s *RunService) Get(ctx context.Context, id uuid.UUID) (*model.Run, error) {
 	return s.runs.Get(ctx, id)
 }

@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 // --- Project Config ---
 
@@ -115,20 +118,23 @@ type SuitePlan struct {
 }
 
 type PlannedStep struct {
-	Name       string            `json:"name"`
-	Method     string            `json:"method"`
-	Path       string            `json:"path"`
-	Params     map[string]any    `json:"params,omitempty"`
-	Body       any               `json:"body,omitempty"`
-	Headers    map[string]string `json:"headers,omitempty"`
-	Captures   []Capture         `json:"captures,omitempty"`
-	Assertions []Assertion       `json:"assertions,omitempty"`
+	Name           string            `json:"name"`
+	Method         string            `json:"method"`
+	Path           string            `json:"path"`
+	Params         map[string]any    `json:"params,omitempty"`
+	Body           any               `json:"body,omitempty"`
+	Headers        map[string]string `json:"headers,omitempty"`
+	Captures       []Capture         `json:"captures,omitempty"`
+	Assertions     []Assertion       `json:"assertions,omitempty"`
+	ResponseSchema json.RawMessage   `json:"response_schema,omitempty"`
 }
 
 type PlannedCase struct {
-	OperationID string      `json:"operation_id"`
-	CaseType    string      `json:"case_type"` // default_list, pagination, search, enum_filter
-	Step        PlannedStep `json:"step"`
+	OperationID       string        `json:"operation_id"`
+	CaseType          string        `json:"case_type"` // default_list, pagination, search, enum_filter
+	Step              PlannedStep   `json:"step"`
+	Steps             []PlannedStep `json:"steps,omitempty"` // multi-step cases (e.g. search-from-response)
+	EmptyResultPolicy string        `json:"empty_result_policy,omitempty"` // allow, warn, fail
 }
 
 // --- Run Result ---

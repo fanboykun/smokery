@@ -77,3 +77,17 @@ func (r *RunRepo) GetResult(_ context.Context, runID uuid.UUID) (*model.StoredRu
 	}
 	return &sr, nil
 }
+
+func (r *RunRepo) DeleteOlderThan(_ context.Context, before time.Time) (int, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	count := 0
+	for id, run := range r.s.runs {
+		if run.CreatedAt.Before(before) {
+			delete(r.s.runs, id)
+			delete(r.s.runResults, id)
+			count++
+		}
+	}
+	return count, nil
+}

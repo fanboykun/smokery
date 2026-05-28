@@ -1,0 +1,21 @@
+# Example: Minimal smoke test configuration
+#
+# The simplest possible config: one environment, one suite that tests all
+# GET endpoints return 200.
+# Use with: smokery compile --config examples/configs/minimal.yaml --spec <spec-file>
+
+environments:
+  - id: dev
+    name: Development
+    base_url: http://localhost:8080
+
+suites:
+  - id: health-check
+    name: All GET Endpoints
+    environment: dev
+    selector:
+      classifications:
+        - list
+        - read
+    strategy:
+      default_list: true

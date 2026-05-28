@@ -1,0 +1,132 @@
+# Example: E-commerce API smoke test configuration
+#
+# Demonstrates advanced features: multiple environments, enum filters,
+# search-from-response, and destructive operation handling.
+# Use with: smokery compile --config examples/configs/ecommerce.yaml --spec <spec-file>
+
+environments:
+  - id: staging
+    name: Staging
+    base_url: https://api.staging.example.com
+    headers:
+      X-Request-Source: smokery
+      X-Correlation-Id: "smoke-{{$timestamp}}"
+
+  - id: production
+    name: Production (read-only)
+    base_url: https://api.example.com
+    headers:
+      X-Request-Source: smokery-readonly
+
+auth_profiles:
+  - id: service-account
+    name: Service Account
+    type: bearer
+    config:
+      token: "{{SERVICE_TOKEN}}"
+
+  - id: api-key
+    name: API Key Auth
+    type: api_key
+    config:
+      header: X-API-Key
+      value: "{{API_KEY}}"
+
+flows:
+  - id: order-flow
+    name: Order Placement Flow
+    description: Place an order and verify it appears in the order list
+    environment: staging
+    auth: service-account
+    steps:
+      - name: list-products
+        operation_id: listProducts
+        params:
+          limit: 5
+          status: available
+        assertions:
+          - type: status
+            expected: 200
+          - type: list_shape
+          - type: not_empty
+        captures:
+          - name: product_id
+            source: body
+            path: data.0.id
+          - name: product_price
+            source: body
+            path: data.0.price
+
+      - name: create-order
+        operation_id: createOrder
+        body:
+          items:
+            - product_id: "{{product_id}}"
+              quantity: 1
+          shipping_address:
+            street: "123 Smoke Test Lane"
+            city: "Testville"
+            zip: "00000"
+        assertions:
+          - type: status
+            expected: 201
+          - type: jsonpath
+            path: status
+            expected: pending
+        captures:
+          - name: order_id
+            source: body
+            path: id
+
+      - name: get-order
+        operation_id: getOrder
+        params:
+          orderId: "{{order_id}}"
+        assertions:
+          - type: status
+            expected: 200
+          - type: jsonpath
+            path: items.0.product_id
+            expected: "{{product_id}}"
+
+    cleanup:
+      - name: cancel-order
+        operation_id: cancelOrder
+        params:
+          orderId: "{{order_id}}"
+
+suites:
+  - id: product-suite
+    name: Product Endpoints
+    description: Generated smoke tests for product listing endpoints
+    environment: staging
+    auth: api-key
+    selector:
+      tags:
+        - products
+      classifications:
+        - list
+        - read
+      exclude:
+        - deleteProduct
+        - archiveProduct
+    strategy:
+      default_list: true
+      pagination: true
+      search_from_response: true
+      enum_filters: true
+      empty_result_policy: warn
+      max_cases_per_op: 5
+
+  - id: readonly-production
+    name: Production Read-Only Smoke
+    description: Safe read-only checks against production
+    environment: production
+    auth: api-key
+    selector:
+      classifications:
+        - list
+        - read
+    strategy:
+      default_list: true
+      empty_result_policy: allow

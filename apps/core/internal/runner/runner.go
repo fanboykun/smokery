@@ -65,11 +65,14 @@ func (r *Runner) Execute(ctx context.Context, plan *model.SmokePlan) *model.RunR
 
 func (r *Runner) executeFlow(ctx context.Context, fp model.FlowPlan, plan *model.SmokePlan, vars map[string]any) model.FlowResult {
 	fr := model.FlowResult{FlowID: fp.FlowID, Name: fp.Name, Status: "passed"}
+	r.emit("flow.started", map[string]string{"flow_id": fp.FlowID, "name": fp.Name})
 
 	for i := range fp.Steps {
 		step := fp.Steps[i]
+		r.emit("flow.step.started", map[string]string{"flow_id": fp.FlowID, "step": step.Name})
 		sr := r.executeStep(ctx, &step, plan, vars)
 		fr.Steps = append(fr.Steps, sr)
+		r.emit("flow.step.finished", sr)
 		if sr.Status == "failed" || sr.Status == "error" {
 			fr.Status = "failed"
 			break
@@ -82,23 +85,27 @@ func (r *Runner) executeFlow(ctx context.Context, fp model.FlowPlan, plan *model
 		fr.Cleanup = append(fr.Cleanup, sr)
 	}
 
+	r.emit("flow.finished", fr)
 	return fr
 }
 
 func (r *Runner) executeSuite(ctx context.Context, sp model.SuitePlan, plan *model.SmokePlan, vars map[string]any) model.SuiteResult {
 	sr := model.SuiteResult{SuiteID: sp.SuiteID, Name: sp.Name, Status: "passed"}
+	r.emit("suite.started", map[string]string{"suite_id": sp.SuiteID, "name": sp.Name})
 
 	for i := range sp.Cases {
 		c := sp.Cases[i]
+		r.emit("suite.case.started", map[string]string{"suite_id": sp.SuiteID, "operation_id": c.OperationID, "case_type": c.CaseType})
 		stepResult := r.executeStep(ctx, &c.Step, plan, vars)
-		sr.Cases = append(sr.Cases, model.CaseResult{
-			OperationID: c.OperationID, CaseType: c.CaseType, Step: stepResult,
-		})
+		cr := model.CaseResult{OperationID: c.OperationID, CaseType: c.CaseType, Step: stepResult}
+		sr.Cases = append(sr.Cases, cr)
+		r.emit("suite.case.result", cr)
 		if stepResult.Status == "failed" || stepResult.Status == "error" {
 			sr.Status = "failed"
 		}
 	}
 
+	r.emit("suite.finished", sr)
 	return sr
 }
 
@@ -179,7 +186,6 @@ func (r *Runner) executeStep(ctx context.Context, step *model.PlannedStep, plan 
 	}
 
 	result.Duration = time.Since(start).Milliseconds()
-	r.emit("step_done", result)
 	return result
 }
 

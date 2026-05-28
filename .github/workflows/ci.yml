@@ -13,8 +13,30 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.26"
-      - run: go build ./...
+
+      - name: Build
+        run: go build ./...
         working-directory: apps/core
+
+      - name: Test
+        run: go test -coverprofile=coverage.out -covermode=atomic ./...
+        working-directory: apps/core
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Total coverage: ${COVERAGE}%"
+          if (( $(echo "$COVERAGE < 40" | bc -l) )); then
+            echo "Coverage ${COVERAGE}% is below 40% threshold"
+            exit 1
+          fi
+        working-directory: apps/core
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.12
+          working-directory: apps/core
 
   web:
     runs-on: ubuntu-latest

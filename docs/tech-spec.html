@@ -192,30 +192,30 @@ ul.spec-list li::before{content:"—";margin-right:8px;color:var(--text3)}
 
 <div id="s-arch" class="section">
   <div class="section-title">Architecture</div>
-  <div class="section-sub">Service boundaries and data flow</div>
+  <div class="section-sub">Service boundaries and data flow — see <a href="architecture.md">docs/architecture.md</a> for the full diagram and rules</div>
   <div class="card">
-    <div class="card-title">Process map</div>
+    <div class="card-title">Process map (current)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px">
       <div>
-        <div style="font-weight:600;margin-bottom:8px">api-server (Go)</div>
+        <div style="font-weight:600;margin-bottom:8px">cmd/server (Go binary)</div>
         <ul class="spec-list">
-          <li>REST API on <code>:8080</code></li>
+          <li>REST API on <code>:8080</code> (huma + echo)</li>
           <li>WebSocket <code>/ws/runs/:id</code></li>
-          <li>Serves compiled plans</li>
-          <li>Stores + queries results</li>
-          <li>Enqueues runner jobs via River</li>
-          <li>Generates reports</li>
+          <li>Embedded frontend (production, via <code>-tags embed_frontend</code>)</li>
+          <li>In-process worker (goroutine-based job execution)</li>
+          <li>Retention cleanup (periodic, configurable TTL)</li>
+          <li>Health check probes DB + MinIO</li>
         </ul>
       </div>
       <div>
-        <div style="font-weight:600;margin-bottom:8px">runner (Go — same binary or separate)</div>
+        <div style="font-weight:600;margin-bottom:8px">cmd/smokery (Go binary — CLI)</div>
         <ul class="spec-list">
-          <li>Polls River job queue</li>
-          <li>Fetches plan from API</li>
-          <li>Executes HTTP calls</li>
-          <li>Streams progress via WebSocket</li>
-          <li>POSTs structured result back</li>
-          <li>Can run as standalone CLI</li>
+          <li>Same compiler + runner as server</li>
+          <li>Memory repos (no database needed)</li>
+          <li>Filesystem blob store for artifacts</li>
+          <li>Commands: <code>run</code>, <code>compile</code>, <code>import-spec</code>, <code>report</code></li>
+          <li>CI-friendly exit codes and output</li>
+          <li>Outputs HTML + JSON report artifacts</li>
         </ul>
       </div>
     </div>
@@ -225,38 +225,44 @@ ul.spec-list li::before{content:"—";margin-right:8px;color:var(--text3)}
     <pre>┌─────────────────────────────────────────────────────┐
 │  Docker Compose (dev) / K8s (prod)                  │
 │                                                     │
-│   SvelteKit SSR  ──► api-server :8080               │
-│   :3000               │                             │
-│                       ├── PostgreSQL :5432           │
-│   Runner process ◄────┤   (River jobs embedded)     │
-│   (same container     │                             │
-│    or separate)       └── MinIO :9000               │
-│                                                     │
-└─────────────────────────────────────────────────────┘</pre>
+│   SvelteKit (dev)  ──► server :8080                 │
+│   :5173                │                            │
+│                        ├── PostgreSQL :5432          │
+│   OR embedded in       │                            │
+│   server binary        └── MinIO :9000              │
+│   (production)                                      │
+└─────────────────────────────────────────────────────┘
+
+CLI (standalone, no infra):
+  smokery compile --config X --spec Y -o plan.yaml
+  smokery run plan.yaml -o ./reports/</pre>
   </div>
   <div class="card">
     <div class="card-title">Repository layout</div>
     <pre>/
 ├── apps/
-│   ├── api/          # Go API server
+│   ├── core/              # Go workspace (single go.mod, both products)
 │   │   ├── cmd/
-│   │   ├── internal/
-│   │   │   ├── compiler/
-│   │   │   ├── runner/
-│   │   │   ├── spec/
-│   │   │   ├── report/
-│   │   │   └── api/
-│   │   └── db/
-│   │       ├── migrations/
-│   │       └── queries/
-│   └── web/          # SvelteKit
-│       └── src/
-│           ├── routes/
-│           ├── lib/
-│           └── components/
-├── packages/
-│   └── types/        # Shared TS types (generated from Go)
-└── docker-compose.yml</pre>
+│   │   │   ├── server/    # HTTP API binary
+│   │   │   ├── smokery/   # CLI binary
+│   │   │   └── openapi/   # OpenAPI spec generator
+│   │   └── internal/
+│   │       ├── model/     # Pure domain types
+│   │       ├── spec/      # OpenAPI parser (libopenapi)
+│   │       ├── compiler/  # Config → SmokePlan
+│   │       ├── runner/    # SmokePlan → RunResult (pluggable hooks)
+│   │       ├── assertion/ # Assertion logic
+│   │       ├── report/    # RunResult → views (debug, CI, HTML, mermaid)
+│   │       ├── port/      # Interfaces (repos, jobs, events, blob)
+│   │       ├── adapter/   # postgres, inproc, minio, fs, memory
+│   │       ├── app/       # Use case orchestration
+│   │       ├── delivery/  # http (huma), cli (cobra)
+│   │       └── frontend/  # Embedded static site (production)
+│   └── web/               # SvelteKit frontend
+├── packages/types/        # Shared TS types (generated)
+├── configs/               # .air.toml, docker-compose.yml
+├── examples/              # Example configs and plans
+└── docs/                  # Design docs, architecture, AI agent docs</pre>
   </div>
 </div>
 

@@ -1,0 +1,13 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+
+issues:
+  exclude-dirs:
+    - internal/adapter/postgres/db

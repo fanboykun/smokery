@@ -5,11 +5,12 @@ import (
 )
 
 type Config struct {
-	Port          string `mapstructure:"PORT"`
-	DatabaseURL   string `mapstructure:"DATABASE_URL"`
-	MinioEndpoint string `mapstructure:"MINIO_ENDPOINT"`
+	Port           string `mapstructure:"PORT"`
+	DatabaseURL    string `mapstructure:"DATABASE_URL"`
+	MinioEndpoint  string `mapstructure:"MINIO_ENDPOINT"`
 	MinioAccessKey string `mapstructure:"MINIO_ACCESS_KEY"`
 	MinioSecretKey string `mapstructure:"MINIO_SECRET_KEY"`
+	RetentionDays  int    `mapstructure:"RETENTION_DAYS"`
 }
 
 func Load() (*Config, error) {
@@ -18,6 +19,7 @@ func Load() (*Config, error) {
 	viper.SetDefault("MINIO_ENDPOINT", "localhost:9000")
 	viper.SetDefault("MINIO_ACCESS_KEY", "minioadmin")
 	viper.SetDefault("MINIO_SECRET_KEY", "minioadmin")
+	viper.SetDefault("RETENTION_DAYS", "30")
 	viper.AutomaticEnv()
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {

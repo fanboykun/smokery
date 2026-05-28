@@ -11,4 +11,5 @@ import (
 // JobEnqueuer enqueues a run for asynchronous execution.
 type JobEnqueuer interface {
 	EnqueueRun(ctx context.Context, runID uuid.UUID, plan *model.SmokePlan) error
+	CancelRun(ctx context.Context, runID uuid.UUID) error
 }

@@ -14,11 +14,11 @@ func RegisterComments(api huma.API, svc *app.CommentService) {
 	huma.Post(api, "/api/runs/{id}/comments", func(ctx context.Context, in *CreateCommentInput) (*CommentOutput, error) {
 		id, err := uuid.Parse(in.ID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid id")
+			return nil, ErrBadRequest("comments", "invalid id")
 		}
 		c, err := svc.Create(ctx, id, in.Body.Author, in.Body.Body)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("failed to create comment", err)
+			return nil, ErrInternal("comments", "failed to create comment", err)
 		}
 		return &CommentOutput{Body: *c}, nil
 	})
@@ -26,11 +26,11 @@ func RegisterComments(api huma.API, svc *app.CommentService) {
 	huma.Get(api, "/api/runs/{id}/comments", func(ctx context.Context, in *IDParam) (*CommentListOutput, error) {
 		id, err := uuid.Parse(in.ID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid id")
+			return nil, ErrBadRequest("comments", "invalid id")
 		}
 		cs, err := svc.ListByRun(ctx, id)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("failed to list comments", err)
+			return nil, ErrInternal("comments", "failed to list comments", err)
 		}
 		return &CommentListOutput{Body: cs}, nil
 	})

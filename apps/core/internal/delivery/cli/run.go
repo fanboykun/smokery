@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -18,6 +20,7 @@ import (
 func newRunCmd(svcs *Services) *cobra.Command {
 	var (
 		jsonOutput bool
+		outputDir  string
 	)
 	cmd := &cobra.Command{
 		Use:   "run [plan-file]",
@@ -29,6 +32,16 @@ func newRunCmd(svcs *Services) *cobra.Command {
 				return err
 			}
 			result := svcs.Runner.Execute(context.Background(), plan)
+
+			// Persist artifacts if output dir specified
+			if outputDir != "" {
+				_ = os.MkdirAll(outputDir, 0755)
+				jsonData := report.GenerateJSONArtifact(result)
+				_ = os.WriteFile(filepath.Join(outputDir, "result.json"), jsonData, 0644)
+				if htmlData, err := report.GenerateHTMLReport(result); err == nil {
+					_ = os.WriteFile(filepath.Join(outputDir, "report.html"), htmlData, 0644)
+				}
+			}
 
 			if jsonOutput {
 				b, _ := json.MarshalIndent(result, "", "  ")
@@ -58,5 +71,6 @@ func newRunCmd(svcs *Services) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output the full RunResult as JSON")
+	cmd.Flags().StringVarP(&outputDir, "output", "o", "", "Directory to save report artifacts (JSON + HTML)")
 	return cmd
 }

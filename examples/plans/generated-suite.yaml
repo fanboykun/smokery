@@ -1,0 +1,107 @@
+# Example: Pre-compiled suite plan with generated cases
+#
+# This plan demonstrates a suite with multiple case types:
+# default_list, pagination, search, and enum_filter.
+#
+# Execute with: smokery run examples/plans/generated-suite.yaml
+
+id: generated-suite-plan
+environment:
+  id: staging
+  name: Staging
+  base_url: https://api.staging.example.com
+
+suite_plans:
+  - suite_id: product-smoke
+    name: Product Endpoint Suite
+    cases:
+      # Default list — just call the endpoint and verify 200
+      - operation_id: listProducts
+        case_type: default_list
+        step:
+          name: listProducts_default
+          method: GET
+          path: /api/products
+          assertions:
+            - type: status
+              expected: 200
+            - type: list_shape
+
+      # Pagination — verify paginated response
+      - operation_id: listProducts
+        case_type: pagination
+        step:
+          name: listProducts_pagination
+          method: GET
+          path: /api/products
+          params:
+            page: 1
+            per_page: 5
+          assertions:
+            - type: status
+              expected: 200
+            - type: list_shape
+            - type: pagination
+
+      # Search — multi-step: list then search with captured value
+      - operation_id: listProducts
+        case_type: search
+        steps:
+          - name: listProducts_search_setup
+            method: GET
+            path: /api/products
+            assertions:
+              - type: status
+                expected: 200
+            captures:
+              - name: search_term
+                source: body
+                path: data.0.name
+
+          - name: listProducts_search
+            method: GET
+            path: /api/products
+            params:
+              q: "{{search_term}}"
+            assertions:
+              - type: status
+                expected: 200
+              - type: list_shape
+
+      # Enum filter cases — one per enum value
+      - operation_id: listProducts
+        case_type: enum_filter
+        step:
+          name: listProducts_filter_status_available
+          method: GET
+          path: /api/products
+          params:
+            status: available
+          assertions:
+            - type: status
+              expected: 200
+
+      - operation_id: listProducts
+        case_type: enum_filter
+        step:
+          name: listProducts_filter_status_sold
+          method: GET
+          path: /api/products
+          params:
+            status: sold
+          assertions:
+            - type: status
+              expected: 200
+
+      - operation_id: listProducts
+        case_type: enum_filter
+        empty_result_policy: warn
+        step:
+          name: listProducts_filter_status_discontinued
+          method: GET
+          path: /api/products
+          params:
+            status: discontinued
+          assertions:
+            - type: status
+              expected: 200

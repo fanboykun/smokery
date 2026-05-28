@@ -20,7 +20,7 @@ func RegisterRuns(api huma.API, svc *app.RunService) {
 	}, func(ctx context.Context, in *CreateRunInput) (*RunOutput, error) {
 		projectID, err := uuid.Parse(in.ProjectID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid project id")
+			return nil, ErrBadRequest("runs", "invalid project id")
 		}
 		var planID *uuid.UUID
 		if in.Body.PlanID != "" {
@@ -35,7 +35,7 @@ func RegisterRuns(api huma.API, svc *app.RunService) {
 			Plan:      in.Body.Plan,
 		})
 		if err != nil {
-			return nil, huma.Error500InternalServerError("failed to start run", err)
+			return nil, ErrInternal("runs", "failed to start run", err)
 		}
 		return &RunOutput{Body: *run}, nil
 	})
@@ -43,11 +43,11 @@ func RegisterRuns(api huma.API, svc *app.RunService) {
 	huma.Get(api, "/api/projects/{project-id}/runs", func(ctx context.Context, in *ProjectIDParam) (*RunListOutput, error) {
 		projectID, err := uuid.Parse(in.ProjectID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid project id")
+			return nil, ErrBadRequest("runs", "invalid project id")
 		}
 		runs, err := svc.ListByProject(ctx, projectID)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("failed to list runs", err)
+			return nil, ErrInternal("runs", "failed to list runs", err)
 		}
 		return &RunListOutput{Body: runs}, nil
 	})
@@ -55,11 +55,11 @@ func RegisterRuns(api huma.API, svc *app.RunService) {
 	huma.Get(api, "/api/runs/{id}", func(ctx context.Context, in *IDParam) (*RunOutput, error) {
 		id, err := uuid.Parse(in.ID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid id")
+			return nil, ErrBadRequest("runs/{id}", "invalid run id")
 		}
 		run, err := svc.Get(ctx, id)
 		if err != nil {
-			return nil, huma.Error404NotFound("run not found")
+			return nil, ErrNotFound("runs/{id}", "run not found")
 		}
 		return &RunOutput{Body: *run}, nil
 	})
@@ -67,12 +67,29 @@ func RegisterRuns(api huma.API, svc *app.RunService) {
 	huma.Get(api, "/api/runs/{id}/result", func(ctx context.Context, in *IDParam) (*RunResultOutput, error) {
 		id, err := uuid.Parse(in.ID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid id")
+			return nil, ErrBadRequest("runs/{id}/result", "invalid run id")
 		}
 		res, err := svc.GetResult(ctx, id)
 		if err != nil {
-			return nil, huma.Error404NotFound("result not found")
+			return nil, ErrNotFound("runs/{id}/result", "result not found")
 		}
 		return &RunResultOutput{Body: *res}, nil
+	})
+
+	huma.Register(api, huma.Operation{
+		OperationID: "cancel-run",
+		Method:      http.MethodPost,
+		Path:        "/api/runs/{id}/cancel",
+		Summary:     "Cancel a running run",
+	}, func(ctx context.Context, in *IDParam) (*RunOutput, error) {
+		id, err := uuid.Parse(in.ID)
+		if err != nil {
+			return nil, ErrBadRequest("runs/{id}/cancel", "invalid run id")
+		}
+		run, err := svc.Cancel(ctx, id)
+		if err != nil {
+			return nil, ErrInternal("runs/{id}/cancel", "failed to cancel run", err)
+		}
+		return &RunOutput{Body: *run}, nil
 	})
 }

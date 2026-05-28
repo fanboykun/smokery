@@ -1,0 +1,109 @@
+# Example: Pre-compiled smoke plan for httpbin.org
+#
+# This plan can be executed directly without compilation:
+#   smokery run examples/plans/httpbin.yaml
+#
+# It tests basic HTTP methods against httpbin.org.
+
+id: httpbin-smoke-plan
+environment:
+  id: httpbin
+  name: httpbin.org
+  base_url: https://httpbin.org
+
+flow_plans:
+  - flow_id: basic-methods
+    name: Basic HTTP Methods
+    steps:
+      - name: get-request
+        method: GET
+        path: /get
+        headers:
+          X-Smoke-Test: "true"
+        assertions:
+          - type: status
+            expected: 200
+          - type: jsonpath
+            path: headers.X-Smoke-Test
+            expected: "true"
+
+      - name: post-json
+        method: POST
+        path: /post
+        body:
+          message: "hello from smokery"
+          timestamp: 1234567890
+        assertions:
+          - type: status
+            expected: 200
+          - type: jsonpath
+            path: json.message
+            expected: "hello from smokery"
+        captures:
+          - name: origin_ip
+            source: body
+            path: origin
+
+      - name: get-with-params
+        method: GET
+        path: /get
+        params:
+          foo: bar
+          count: 42
+        assertions:
+          - type: status
+            expected: 200
+          - type: jsonpath
+            path: args.foo
+            expected: bar
+
+      - name: get-headers
+        method: GET
+        path: /headers
+        headers:
+          X-Custom-Header: smoke-value
+        assertions:
+          - type: status
+            expected: 200
+
+      - name: get-status-201
+        method: GET
+        path: /status/201
+        assertions:
+          - type: status
+            expected: 201
+
+suite_plans:
+  - suite_id: status-codes
+    name: Status Code Verification
+    cases:
+      - operation_id: status-200
+        case_type: default_list
+        step:
+          name: verify-200
+          method: GET
+          path: /status/200
+          assertions:
+            - type: status
+              expected: 200
+
+      - operation_id: status-204
+        case_type: default_list
+        step:
+          name: verify-204
+          method: GET
+          path: /status/204
+          assertions:
+            - type: status
+              expected: 204
+
+      - operation_id: json-response
+        case_type: default_list
+        step:
+          name: verify-json
+          method: GET
+          path: /json
+          assertions:
+            - type: status
+              expected: 200
+            - type: not_empty

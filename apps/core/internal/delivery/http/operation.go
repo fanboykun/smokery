@@ -15,11 +15,11 @@ func RegisterOperations(api huma.API, svc *app.OperationService) {
 	huma.Get(api, "/api/specs/{spec-id}/operations", func(ctx context.Context, in *SpecIDParam) (*OperationListOutput, error) {
 		specID, err := uuid.Parse(in.SpecID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid spec id")
+			return nil, ErrBadRequest("operations", "invalid spec id")
 		}
 		ops, err := svc.ListBySpec(ctx, specID)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("failed to list operations", err)
+			return nil, ErrInternal("operations", "failed to list operations", err)
 		}
 		return &OperationListOutput{Body: ops}, nil
 	})
@@ -27,11 +27,11 @@ func RegisterOperations(api huma.API, svc *app.OperationService) {
 	huma.Put(api, "/api/operations/{id}/classification", func(ctx context.Context, in *UpdateClassificationInput) (*OperationOutput, error) {
 		id, err := uuid.Parse(in.ID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid id")
+			return nil, ErrBadRequest("operations", "invalid id")
 		}
 		op, err := svc.UpdateClassification(ctx, id, in.Body.Classification, in.Body.IsDestructive)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("failed to update classification", err)
+			return nil, ErrInternal("operations", "failed to update classification", err)
 		}
 		return &OperationOutput{Body: *op}, nil
 	})
@@ -44,11 +44,11 @@ func RegisterOperations(api huma.API, svc *app.OperationService) {
 	}, func(ctx context.Context, in *UpdateOverridesInput) (*OperationOutput, error) {
 		id, err := uuid.Parse(in.ID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid id")
+			return nil, ErrBadRequest("operations", "invalid id")
 		}
 		op, err := svc.UpdateOverrides(ctx, id, in.RawBody)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("failed to update overrides", err)
+			return nil, ErrInternal("operations", "failed to update overrides", err)
 		}
 		return &OperationOutput{Body: *op}, nil
 	})

@@ -12,10 +12,13 @@ import (
 	"github.com/fanboykun/smokery/apps/core/internal/port"
 )
 
-type RunRepo struct{ q *db.Queries }
+type RunRepo struct {
+	q    *db.Queries
+	pool *pgxpool.Pool
+}
 
 func NewRunRepo(pool *pgxpool.Pool) *RunRepo {
-	return &RunRepo{q: db.New(pool)}
+	return &RunRepo{q: db.New(pool), pool: pool}
 }
 
 var _ port.RunRepo = (*RunRepo)(nil)
@@ -102,4 +105,12 @@ func runResultToModel(r db.RunResult) *model.StoredRunResult {
 		Result:    r.Result,
 		CreatedAt: fromPgTimestamptz(r.CreatedAt),
 	}
+}
+
+func (r *RunRepo) DeleteOlderThan(ctx context.Context, before time.Time) (int, error) {
+	tag, err := r.pool.Exec(ctx, "DELETE FROM runs WHERE created_at < $1", before)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
 }

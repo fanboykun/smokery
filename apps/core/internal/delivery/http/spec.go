@@ -20,11 +20,11 @@ func RegisterSpecs(api huma.API, svc *app.SpecService) {
 	}, func(ctx context.Context, in *ImportSpecInput) (*SpecAnalysisOutput, error) {
 		projectID, err := uuid.Parse(in.ProjectID)
 		if err != nil {
-			return nil, huma.Error400BadRequest("invalid project id")
+			return nil, ErrBadRequest("specs", "invalid project id")
 		}
 		res, err := svc.Import(ctx, projectID, in.RawBody)
 		if err != nil {
-			return nil, huma.Error422UnprocessableEntity("failed to import spec", err)
+			return nil, ErrUnprocessable("specs", "failed to import spec", err)
 		}
 		return &SpecAnalysisOutput{Body: *res.Analysis}, nil
 	})

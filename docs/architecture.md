@@ -4,6 +4,81 @@
 
 ---
 
+## Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph Delivery
+        HTTP["delivery/http<br/>(huma + echo + websocket)"]
+        CLI["delivery/cli<br/>(cobra)"]
+    end
+
+    subgraph Application
+        APP["app/<br/>ProjectService, SpecService,<br/>RunService, PlanService,<br/>ReportService, CommentService"]
+    end
+
+    subgraph Domain
+        MODEL["model/<br/>Pure Go types"]
+        SPEC["spec/<br/>OpenAPI parser"]
+        COMPILER["compiler/<br/>Config → SmokePlan"]
+        RUNNER["runner/<br/>SmokePlan → RunResult"]
+        HOOKS["runner/hook/<br/>Auth, Interpolate, Capture,<br/>Redact, Trace, Assert"]
+        ASSERTION["assertion/<br/>Status, JSONPath, Schema,<br/>Pagination, EmptyResult"]
+        REPORT["report/<br/>Debug, CI, Mermaid, HTML"]
+    end
+
+    subgraph Ports
+        REPO["port/<br/>ProjectRepo, SpecRepo,<br/>RunRepo, ArtifactRepo,<br/>CommentRepo"]
+        JOB["port/<br/>JobEnqueuer, EventBus"]
+        BLOB["port/<br/>BlobStore"]
+    end
+
+    subgraph Adapters
+        PG["adapter/postgres<br/>(pgx + sqlc)"]
+        INPROC["adapter/inproc<br/>(goroutine worker + event bus)"]
+        MINIO["adapter/minio<br/>(S3-compatible)"]
+        FS["adapter/fs<br/>(filesystem)"]
+        MEM["adapter/memory<br/>(in-memory)"]
+    end
+
+    subgraph Binaries
+        SERVER["cmd/server"]
+        SMOKERY["cmd/smokery"]
+    end
+
+    HTTP --> APP
+    CLI --> APP
+    APP --> REPO
+    APP --> JOB
+    APP --> BLOB
+    APP --> COMPILER
+    APP --> RUNNER
+    APP --> REPORT
+
+    RUNNER --> HOOKS
+    HOOKS --> ASSERTION
+    COMPILER --> SPEC
+    COMPILER --> MODEL
+    RUNNER --> MODEL
+
+    PG -.->|implements| REPO
+    INPROC -.->|implements| JOB
+    MINIO -.->|implements| BLOB
+    FS -.->|implements| BLOB
+    MEM -.->|implements| REPO
+
+    SERVER --> HTTP
+    SERVER --> PG
+    SERVER --> INPROC
+    SERVER --> MINIO
+
+    SMOKERY --> CLI
+    SMOKERY --> MEM
+    SMOKERY --> FS
+```
+
+---
+
 ## 1. Two products, one core
 
 Smokery ships as two distinct products that share the same domain code:
@@ -302,4 +377,4 @@ The Go workspace lives at `apps/core`. The CLI binary is `smokery`. The HTTP ser
 
 ---
 
-*Last updated: 2026-05-26*
+*Last updated: 2026-05-28*

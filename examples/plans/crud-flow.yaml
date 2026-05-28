@@ -1,0 +1,107 @@
+# Example: Pre-compiled smoke plan for a REST API
+#
+# This plan demonstrates a typical CRUD flow with variable capture and
+# interpolation. Replace the base_url with your actual API.
+#
+# Execute with: smokery run examples/plans/crud-flow.yaml
+
+id: crud-flow-plan
+environment:
+  id: local
+  name: Local API
+  base_url: http://localhost:3000
+  headers:
+    Accept: application/json
+
+auth:
+  id: bearer
+  name: Bearer Token
+  type: bearer
+  config:
+    token: test-token-123
+
+flow_plans:
+  - flow_id: user-crud
+    name: User CRUD Flow
+    steps:
+      - name: list-users-empty
+        method: GET
+        path: /api/users
+        assertions:
+          - type: status
+            expected: 200
+          - type: list_shape
+
+      - name: create-user
+        method: POST
+        path: /api/users
+        body:
+          name: "Smoke Test User"
+          email: "smoke@test.local"
+          role: member
+        assertions:
+          - type: status
+            expected: 201
+          - type: jsonpath
+            path: name
+            expected: "Smoke Test User"
+        captures:
+          - name: user_id
+            source: body
+            path: id
+
+      - name: get-user
+        method: GET
+        path: /api/users/{{user_id}}
+        assertions:
+          - type: status
+            expected: 200
+          - type: jsonpath
+            path: email
+            expected: "smoke@test.local"
+
+      - name: update-user
+        method: PUT
+        path: /api/users/{{user_id}}
+        body:
+          name: "Updated User"
+          email: "smoke@test.local"
+          role: admin
+        assertions:
+          - type: status
+            expected: 200
+          - type: jsonpath
+            path: role
+            expected: admin
+
+      - name: list-users-has-one
+        method: GET
+        path: /api/users
+        assertions:
+          - type: status
+            expected: 200
+          - type: not_empty
+
+    cleanup:
+      - name: delete-user
+        method: DELETE
+        path: /api/users/{{user_id}}
+
+  - flow_id: error-handling
+    name: Error Handling Verification
+    steps:
+      - name: get-nonexistent
+        method: GET
+        path: /api/users/00000000-0000-0000-0000-000000000000
+        assertions:
+          - type: status
+            expected: 404
+
+      - name: create-invalid
+        method: POST
+        path: /api/users
+        body:
+          invalid: true
+        assertions:
+          - type: status
+            expected: 400
