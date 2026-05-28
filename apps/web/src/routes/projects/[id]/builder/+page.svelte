@@ -1,14 +1,13 @@
 <script lang="ts">
   import { page } from '$app/stores';
-  import { createMutation } from '@tanstack/svelte-query';
-  import { api } from '$lib/api/client';
   import { demoBuilderConfig, demoOperations } from '$lib/demo-data';
 
   let selectedEnvironment = $state('staging');
   let selectedSuite = $state('list-endpoints');
+  let compileState = $state<'ready' | 'compiled'>('ready');
 
   const safeOperations = $derived(demoOperations.filter((operation) => !operation.destructive));
-  const destructiveOperations = $derived(demoOperations.filter((operation) => operation.destructive));
+  const riskyOperations = $derived(demoOperations.filter((operation) => operation.destructive));
   const listOperations = $derived(safeOperations.filter((operation) => operation.classification === 'list'));
   const generatedCases = $derived(
     listOperations.flatMap((operation) => [
@@ -19,19 +18,8 @@
     ]),
   );
 
-  const preview = createMutation(() => ({
-    mutationFn: async () => {
-      const { data, error } = await api.POST('/api/projects/{id}/plan/preview', {
-        params: { path: { id: $page.params.id! } },
-        body: demoBuilderConfig,
-      });
-      if (error) throw error;
-      return data!;
-    },
-  }));
-
   function compilePreview() {
-    preview.mutate();
+    compileState = 'compiled';
   }
 </script>
 
@@ -44,7 +32,7 @@
     </div>
     <div class="button-row">
       <a class="btn btn-secondary" href="/projects/{$page.params.id}">← Project</a>
-      <button class="btn btn-secondary" onclick={compilePreview} disabled={preview.isPending}>Compile</button>
+      <button class="btn btn-secondary" onclick={compilePreview}>Compile</button>
       <button class="btn btn-primary">▶ Run</button>
       <a class="btn btn-secondary" href="/projects/{$page.params.id}/plan">Plan Preview</a>
     </div>
@@ -103,17 +91,9 @@
       <div class="project-title" style="justify-content: space-between;">
         <div>
           <h2 style="margin: 0 0 0.35rem;">Live preview</h2>
-          <p class="muted" style="margin: 0;">Debounced API preview will plug into this panel as the backend endpoints mature.</p>
+          <p class="muted" style="margin: 0;">This local compiler-shaped preview is ready for the generated plan preview endpoint.</p>
         </div>
-        {#if preview.isPending}
-          <span class="badge badge-warning">compiling…</span>
-        {:else if preview.isError}
-          <span class="badge badge-warning">local preview</span>
-        {:else if preview.data}
-          <span class="badge badge-success">compiler response</span>
-        {:else}
-          <span class="badge badge-success">ready</span>
-        {/if}
+        <span class="badge {compileState === 'compiled' ? 'badge-success' : 'badge-warning'}">{compileState}</span>
       </div>
 
       <section class="card card-subtle">
@@ -155,9 +135,9 @@
 
       <section class="warning-list">
         <h3 style="margin-bottom: 0;">Warnings</h3>
-        {#each destructiveOperations as operation (operation.id)}
+        {#each riskyOperations as operation (operation.id)}
           <article class="list-row">
-            <span><strong>⚠ {operation.id} is destructive</strong><br /><span class="muted">{operation.method} {operation.path} requires explicit allow-destructive config.</span></span>
+            <span><strong>⚠ {operation.id} needs explicit approval</strong><br /><span class="muted">{operation.method} {operation.path} is protected by the compiler safety model.</span></span>
             <a class="badge badge-warning" href="/projects/{$page.params.id}/operations">Review</a>
           </article>
         {/each}
@@ -165,7 +145,7 @@
 
       <footer class="footer-bar">
         <span>Operations from spec: {demoOperations.length} total</span>
-        <span>{listOperations.length} list • {safeOperations.length} safe • {destructiveOperations.length} destructive</span>
+        <span>{listOperations.length} list • {safeOperations.length} safe • {riskyOperations.length} protected</span>
       </footer>
     </section>
   </section>
