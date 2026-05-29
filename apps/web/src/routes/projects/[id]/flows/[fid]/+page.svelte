@@ -9,6 +9,7 @@
   import { Label } from '$lib/components/ui/label';
   import { Textarea } from '$lib/components/ui/textarea';
   import { Separator } from '$lib/components/ui/separator';
+  import OperationPicker from '$lib/components/OperationPicker.svelte';
 
   const projectId = $page.params.id!;
   const flowId = $page.params.fid!;
@@ -195,7 +196,15 @@
           </Card.Header>
           <Card.Content class="space-y-3">
             <div class="space-y-1"><Label>Name</Label><Input bind:value={editingStep.name} placeholder="Create user" /></div>
-            <div class="space-y-1"><Label>Operation ID</Label><Input bind:value={editingStep.operation_id} placeholder="createUser" /></div>
+            <OperationPicker
+              projectId={projectId}
+              bind:value={editingStep.operation_id}
+              onchange={(opId) => {
+                editingStep.operation_id = opId;
+              }}
+              label="Operation"
+              placeholder="Search operations…"
+            />
             <div class="space-y-1">
               <Label>Body (JSON)</Label>
               <Textarea value={typeof editingStep.body === 'string' ? editingStep.body : JSON.stringify(editingStep.body ?? '', null, 2)} oninput={(e) => { if (editingStep) editingStep.body = e.currentTarget.value; }} class="min-h-[4rem] font-mono text-xs" placeholder={'{\n}'} />
