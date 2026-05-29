@@ -102,7 +102,7 @@ func Open(path string) (*DB, error) {
 }
 
 func (d *DB) Ping(ctx context.Context) error {
-	return d.DB.PingContext(ctx)
+	return d.PingContext(ctx)
 }
 
 // --- Helpers ---
@@ -329,10 +329,6 @@ func (r *OperationRepo) UpdateOverrides(ctx context.Context, id uuid.UUID, overr
 func (r *OperationRepo) get(ctx context.Context, id uuid.UUID) (*model.Operation, error) {
 	row := r.db.QueryRowContext(ctx, "SELECT id, spec_id, operation_id, method, path, summary, tags, classification, is_destructive, overrides, created_at FROM operations WHERE id = ?", id.String())
 	return scanOperationRow(row)
-}
-
-type scanner interface {
-	Scan(dest ...any) error
 }
 
 func scanOperation(rows *sql.Rows) (*model.Operation, error) {
