@@ -75,6 +75,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{project-id}/plan/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview compiled plan without persisting */
+        post: operations["preview-plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{project-id}/runs": {
         parameters: {
             query?: never;
@@ -100,7 +117,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** List API projects by project ID specs */
+        get: operations["list-api-projects-by-project-id-specs"];
         put?: never;
         /** Import OpenAPI spec */
         post: operations["import-spec"];
@@ -138,6 +156,23 @@ export interface paths {
         get: operations["list-api-runs-by-id-artifacts"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a running run */
+        post: operations["cancel-run"];
         delete?: never;
         options?: never;
         head?: never;
@@ -254,8 +289,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get health */
-        get: operations["get-health"];
+        /** Health check with DB and blob store probes */
+        get: operations["health-check"];
         put?: never;
         post?: never;
         delete?: never;
@@ -337,6 +372,13 @@ export interface components {
             id: string;
             run_id: string;
         };
+        CompileError: {
+            entity?: string;
+            message: string;
+            path: string;
+            severity: string;
+            stage: string;
+        };
         CreateCommentInputBody: {
             /**
              * Format: uri
@@ -386,6 +428,10 @@ export interface components {
             run_id: string;
             status: string;
             traces?: components["schemas"]["TraceInfo"][] | null;
+        };
+        EnumParam: {
+            name: string;
+            values: string[] | null;
         };
         Environment: {
             base_url: string;
@@ -450,23 +496,46 @@ export interface components {
             status: number;
             step: string;
         };
+        Flow: {
+            auth?: string;
+            cleanup?: components["schemas"]["FlowStep"][] | null;
+            description?: string;
+            environment: string;
+            id: string;
+            name: string;
+            steps: components["schemas"]["FlowStep"][] | null;
+        };
         FlowPlan: {
             cleanup?: components["schemas"]["PlannedStep"][] | null;
             flow_id: string;
             name: string;
             steps: components["schemas"]["PlannedStep"][] | null;
         };
-        HealthOutputBody: {
+        FlowStep: {
+            assertions?: components["schemas"]["Assertion"][] | null;
+            body?: unknown;
+            captures?: components["schemas"]["Capture"][] | null;
+            headers?: {
+                [key: string]: string;
+            };
+            name: string;
+            operation_id: string;
+            params?: {
+                [key: string]: unknown;
+            };
+        };
+        HealthDetailOutputBody: {
             /**
              * Format: uri
              * @description A URL to the JSON Schema for this object.
-             * @example http://localhost:8080/schemas/HealthOutputBody.json
+             * @example http://localhost:8080/schemas/HealthDetailOutputBody.json
              */
             readonly $schema?: string;
-            /**
-             * @description Service health status
-             * @example ok
-             */
+            /** @example ok */
+            blob: string;
+            /** @example ok */
+            db: string;
+            /** @example ok */
             status: string;
         };
         Operation: {
@@ -495,13 +564,28 @@ export interface components {
             method: string;
             operation_id: string;
             path: string;
+            query_hints?: components["schemas"]["QueryHints"];
+            response_schema?: unknown;
             summary: string;
             tags: string[] | null;
         };
+        Output: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/Output.json
+             */
+            readonly $schema?: string;
+            errors?: components["schemas"]["CompileError"][] | null;
+            plan?: components["schemas"]["SmokePlan"];
+            warnings?: components["schemas"]["CompileError"][] | null;
+        };
         PlannedCase: {
             case_type: string;
+            empty_result_policy?: string;
             operation_id: string;
             step: components["schemas"]["PlannedStep"];
+            steps?: components["schemas"]["PlannedStep"][] | null;
         };
         PlannedStep: {
             assertions?: components["schemas"]["Assertion"][] | null;
@@ -516,6 +600,7 @@ export interface components {
                 [key: string]: unknown;
             };
             path: string;
+            response_schema?: unknown;
         };
         Project: {
             /**
@@ -531,6 +616,23 @@ export interface components {
             name: string;
             /** Format: date-time */
             updated_at: string;
+        };
+        ProjectConfig: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/ProjectConfig.json
+             */
+            readonly $schema?: string;
+            auth_profiles: components["schemas"]["AuthProfile"][] | null;
+            environments: components["schemas"]["Environment"][] | null;
+            flows: components["schemas"]["Flow"][] | null;
+            suites: components["schemas"]["Suite"][] | null;
+        };
+        QueryHints: {
+            enum_filters?: components["schemas"]["EnumParam"][] | null;
+            pagination_params?: string[] | null;
+            search_params?: string[] | null;
         };
         Run: {
             /**
@@ -560,6 +662,16 @@ export interface components {
             project_id: string;
             suite_plans?: components["schemas"]["SuitePlan"][] | null;
         };
+        Spec: {
+            analysis: string;
+            /** Format: date-time */
+            created_at: string;
+            id: string;
+            project_id: string;
+            raw: string;
+            title: string;
+            version: string;
+        };
         StoredRunResult: {
             /**
              * Format: uri
@@ -573,10 +685,34 @@ export interface components {
             result: string;
             run_id: string;
         };
+        Suite: {
+            auth?: string;
+            description?: string;
+            environment: string;
+            id: string;
+            name: string;
+            selector: components["schemas"]["SuiteSelector"];
+            strategy: components["schemas"]["SuiteStrategy"];
+        };
         SuitePlan: {
             cases: components["schemas"]["PlannedCase"][] | null;
             name: string;
             suite_id: string;
+        };
+        SuiteSelector: {
+            classifications?: string[] | null;
+            exclude?: string[] | null;
+            paths?: string[] | null;
+            tags?: string[] | null;
+        };
+        SuiteStrategy: {
+            default_list: boolean;
+            empty_result_policy: string;
+            enum_filters: boolean;
+            /** Format: int64 */
+            max_cases_per_op?: number;
+            pagination: boolean;
+            search_from_response: boolean;
         };
         TraceInfo: {
             request_id?: string;
@@ -848,6 +984,42 @@ export interface operations {
             };
         };
     };
+    "preview-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project UUID */
+                "project-id": string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectConfig"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Output"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "list-api-projects-by-project-id-runs": {
         parameters: {
             query?: never;
@@ -903,6 +1075,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Run"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-api-projects-by-project-id-specs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project UUID */
+                "project-id": string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spec"][] | null;
                 };
             };
             /** @description Error */
@@ -1003,6 +1207,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Artifact"][] | null;
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "cancel-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
                 };
             };
             /** @description Error */
@@ -1244,7 +1480,7 @@ export interface operations {
             };
         };
     };
-    "get-health": {
+    "health-check": {
         parameters: {
             query?: never;
             header?: never;
@@ -1259,7 +1495,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HealthOutputBody"];
+                    "application/json": components["schemas"]["HealthDetailOutputBody"];
                 };
             };
             /** @description Error */

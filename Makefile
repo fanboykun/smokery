@@ -31,6 +31,14 @@ dev:
 	cd configs && air -c .air.toml
 
 # --- Generate ---
+# Workflow with air (hot-reload):
+#   1. `make dev` starts air watching apps/core for Go changes.
+#   2. After changing API handlers/types, run `make generate` in another terminal.
+#      This regenerates the OpenAPI spec from the Go code and then regenerates
+#      the TypeScript types for the frontend.
+#   3. The SvelteKit dev server (bun dev) picks up the new types automatically.
+#
+# TL;DR: Go code change → `make generate` → FE types updated.
 generate: generate-openapi generate-types
 
 generate-openapi:
@@ -72,6 +80,7 @@ migrate:
 install:
 	cd apps/core && go mod tidy
 	bun install
+	git config core.hooksPath .githooks
 
 # --- Clean ---
 clean:

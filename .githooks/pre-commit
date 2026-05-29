@@ -1,0 +1,11 @@
+#!/bin/sh
+# Pre-commit hook: regenerate FE types if Go API delivery layer changed.
+# Install: git config core.hooksPath .githooks
+
+CHANGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^apps/core/internal/delivery/http/|^apps/core/cmd/openapi/")
+
+if [ -n "$CHANGED" ]; then
+  echo "API files changed, regenerating OpenAPI spec + TypeScript types..."
+  make generate
+  git add apps/web/openapi.json apps/web/src/lib/api/v1.d.ts
+fi
