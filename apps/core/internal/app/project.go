@@ -15,8 +15,17 @@ type ProjectService struct {
 	runs     port.RunRepo
 }
 
-func NewProjectService(p port.ProjectRepo, s port.SpecRepo, r port.RunRepo) *ProjectService {
-	return &ProjectService{projects: p, specs: s, runs: r}
+func NewProjectService(p port.ProjectRepo, deps ...any) *ProjectService {
+	svc := &ProjectService{projects: p}
+	for _, dep := range deps {
+		switch repo := dep.(type) {
+		case port.SpecRepo:
+			svc.specs = repo
+		case port.RunRepo:
+			svc.runs = repo
+		}
+	}
+	return svc
 }
 
 func (s *ProjectService) Create(ctx context.Context, name, description string) (*model.Project, error) {
