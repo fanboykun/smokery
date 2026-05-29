@@ -7,7 +7,6 @@ linters:
     - staticcheck
     - unused
     - ineffassign
-
-issues:
-  exclude-dirs:
-    - internal/adapter/postgres/db
+  exclusions:
+    paths:
+      - internal/adapter/postgres/db
