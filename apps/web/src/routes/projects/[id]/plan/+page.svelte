@@ -8,6 +8,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
+  import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import type { components } from '$lib/api/v1';
 
   type CompilerOutput = components['schemas']['Output'];
@@ -63,6 +64,7 @@
 </script>
 
 <main class="mx-auto max-w-5xl px-6 py-8">
+  <Breadcrumb crumbs={[{ label: projectId.slice(0, 8), href: `/projects/${projectId}` }, { label: 'Plan Preview' }]} />
   <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
       <p class="text-xs font-bold uppercase tracking-widest text-primary">Project {projectId.slice(0, 8)}</p>

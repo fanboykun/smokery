@@ -8,6 +8,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { Separator } from '$lib/components/ui/separator';
+  import Breadcrumb from '$lib/components/Breadcrumb.svelte';
 
   const config = createProjectConfigStore($page.params.id!);
 
@@ -87,6 +88,7 @@
 </script>
 
 <main class="mx-auto max-w-5xl px-6 py-8">
+  <Breadcrumb crumbs={[{ label: $page.params.id?.slice(0, 8) ?? '', href: `/projects/${$page.params.id}` }, { label: 'Environments & Auth' }]} />
   <div class="mb-6">
     <p class="text-xs font-bold uppercase tracking-widest text-primary">Project {$page.params.id?.slice(0, 8)}</p>
     <h1 class="text-3xl font-bold">Environments & Auth</h1>

@@ -8,6 +8,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Textarea } from '$lib/components/ui/textarea';
   import { Separator } from '$lib/components/ui/separator';
+  import Breadcrumb from '$lib/components/Breadcrumb.svelte';
 
   let filter = $state('');
   let selectedId = $state('');
@@ -108,6 +109,7 @@
 </script>
 
 <main class="mx-auto max-w-7xl px-6 py-8">
+  <Breadcrumb crumbs={[{ label: $page.params.id?.slice(0, 8) ?? '', href: `/projects/${$page.params.id}` }, { label: 'Operations' }]} />
   <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
       <p class="text-xs font-bold uppercase tracking-widest text-primary">Project {$page.params.id?.slice(0, 8)}</p>

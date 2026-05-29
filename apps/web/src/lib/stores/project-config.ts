@@ -90,7 +90,11 @@ function loadConfig(projectId: string): ProjectConfig {
 	}
 }
 
+const stores = new Map<string, ReturnType<typeof writable<ProjectConfig>>>();
+
 export function createProjectConfigStore(projectId: string) {
+	if (stores.has(projectId)) return stores.get(projectId)!;
+
 	const initial = loadConfig(projectId);
 	const store = writable<ProjectConfig>(initial);
 
@@ -100,5 +104,6 @@ export function createProjectConfigStore(projectId: string) {
 		});
 	}
 
+	stores.set(projectId, store);
 	return store;
 }

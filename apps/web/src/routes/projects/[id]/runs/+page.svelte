@@ -6,6 +6,7 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import { Chart, Area, Axis, Svg } from 'layerchart';
+  import Breadcrumb from '$lib/components/Breadcrumb.svelte';
   import { scaleTime, scaleLinear } from 'd3-scale';
 
   const queryClient = useQueryClient();
@@ -67,6 +68,7 @@
 </script>
 
 <main class="mx-auto max-w-5xl px-6 py-8">
+  <Breadcrumb crumbs={[{ label: projectId.slice(0, 8), href: `/projects/${projectId}` }, { label: 'Runs' }]} />
   <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
     <div>
       <p class="text-xs font-bold uppercase tracking-widest text-primary">Project {projectId.slice(0, 8)}</p>

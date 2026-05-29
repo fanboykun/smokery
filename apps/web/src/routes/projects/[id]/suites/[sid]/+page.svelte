@@ -62,7 +62,7 @@
       },
       strategy: { ...suite.strategy },
     };
-    console.log('SAVING SUITE:', JSON.stringify(toSave.selector));
+    console.log('[smokery] saving suite:', toSave.id, 'paths:', toSave.selector.paths);
     config.update((c) => {
       const existing = c.suites.filter((s) => s.id !== toSave.id);
       return { ...c, suites: [...existing, toSave] };
