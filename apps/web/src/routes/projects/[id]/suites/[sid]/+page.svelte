@@ -18,8 +18,21 @@
 
   let suite = $state<Suite>(
     isNew
-      ? { id: crypto.randomUUID(), name: '', environment: '', selector: {}, strategy: { ...defaultStrategy } }
-      : { ...($config.suites.find((s) => s.id === suiteId) ?? { id: suiteId, name: '', environment: '', selector: {}, strategy: { ...defaultStrategy } }) },
+      ? { id: crypto.randomUUID(), name: '', environment: '', selector: { tags: [], classifications: [], paths: [], exclude: [] }, strategy: { ...defaultStrategy } }
+      : (() => {
+          const found = $config.suites.find((s) => s.id === suiteId);
+          if (!found) return { id: suiteId, name: '', environment: '', selector: { tags: [], classifications: [], paths: [], exclude: [] }, strategy: { ...defaultStrategy } };
+          return {
+            ...found,
+            selector: {
+              tags: [...(found.selector.tags ?? [])],
+              classifications: [...(found.selector.classifications ?? [])],
+              paths: [...(found.selector.paths ?? [])],
+              exclude: [...(found.selector.exclude ?? [])],
+            },
+            strategy: { ...found.strategy },
+          };
+        })(),
   );
 
   // Selector input helpers
@@ -39,18 +52,27 @@
 
   function saveSuite() {
     if (!suite.name) return;
+    const toSave = {
+      ...suite,
+      selector: {
+        tags: [...(suite.selector.tags ?? [])],
+        classifications: [...(suite.selector.classifications ?? [])],
+        paths: [...(suite.selector.paths ?? [])],
+        exclude: [...(suite.selector.exclude ?? [])],
+      },
+      strategy: { ...suite.strategy },
+    };
+    console.log('SAVING SUITE:', JSON.stringify(toSave.selector));
     config.update((c) => {
-      const idx = c.suites.findIndex((s) => s.id === suite.id);
-      if (idx >= 0) c.suites[idx] = suite;
-      else c.suites = [...c.suites, suite];
-      return c;
+      const existing = c.suites.filter((s) => s.id !== toSave.id);
+      return { ...c, suites: [...existing, toSave] };
     });
-    goto(`/projects/${projectId}/environments`);
+    goto(`/projects/${projectId}`);
   }
 
   function deleteSuite() {
     config.update((c) => ({ ...c, suites: c.suites.filter((s) => s.id !== suite.id) }));
-    goto(`/projects/${projectId}/environments`);
+    goto(`/projects/${projectId}`);
   }
 </script>
 
@@ -131,7 +153,7 @@
                 <Badge variant="secondary" class="gap-1">{p}<button class="ml-1" onclick={() => (suite.selector.paths = removeFrom(suite.selector.paths, p))}>×</button></Badge>
               {/each}
             </div>
-            <div class="flex gap-2"><Input bind:value={pathInput} placeholder="/users*" class="flex-1" /><Button variant="outline" size="sm" onclick={addPath}>Add</Button></div>
+            <div class="flex gap-2"><input bind:value={pathInput} placeholder="/api/functional-admin*" class="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm" /><Button variant="outline" size="sm" onclick={addPath}>Add</Button></div>
           </div>
           <!-- Exclude -->
           <div class="space-y-2">

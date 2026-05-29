@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation';
   import { createMutation } from '@tanstack/svelte-query';
   import { api } from '$lib/api/client';
   import { createProjectConfigStore } from '$lib/stores/project-config';
@@ -30,7 +31,7 @@
           })),
           suites: $config.suites.map((s) => ({
             ...s,
-            selector: { tags: s.selector.tags ?? null, classifications: s.selector.classifications ?? null, paths: s.selector.paths ?? null, exclude: s.selector.exclude ?? null },
+            selector: { tags: s.selector.tags ?? [], classifications: s.selector.classifications ?? [], paths: s.selector.paths ?? [], exclude: s.selector.exclude ?? [] },
             strategy: { ...s.strategy, max_cases_per_op: s.strategy.max_cases_per_op || 0 },
           })),
         },
@@ -46,6 +47,19 @@
   const plan = $derived(result?.plan);
   const totalFlowSteps = $derived(plan?.flow_plans?.reduce((n, f) => n + (f.steps?.length ?? 0), 0) ?? 0);
   const totalCases = $derived(plan?.suite_plans?.reduce((n, s) => n + (s.cases?.length ?? 0), 0) ?? 0);
+
+  const startRun = createMutation(() => ({
+    mutationFn: async () => {
+      if (!plan) throw new Error('No plan compiled');
+      const { data, error } = await api.POST('/api/projects/{project-id}/runs', {
+        params: { path: { 'project-id': projectId } },
+        body: { plan_id: plan.id, plan },
+      });
+      if (error) throw error;
+      return data!;
+    },
+    onSuccess: (data) => { goto(`/runs/${data.id}`); },
+  }));
 </script>
 
 <main class="mx-auto max-w-5xl px-6 py-8">
@@ -60,6 +74,11 @@
       <Button onclick={() => compile.mutate()} disabled={compile.isPending}>
         {compile.isPending ? 'Compiling…' : '▶ Compile'}
       </Button>
+      {#if plan && !hasErrors}
+        <Button variant="default" onclick={() => startRun.mutate()} disabled={startRun.isPending}>
+          {startRun.isPending ? 'Starting…' : '🚀 Run'}
+        </Button>
+      {/if}
     </div>
   </div>
 

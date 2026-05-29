@@ -4,15 +4,23 @@
   import { api } from '$lib/api/client';
   import { createProjectConfigStore } from '$lib/stores/project-config';
   import * as Card from '$lib/components/ui/card';
+  import * as Tabs from '$lib/components/ui/tabs';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
+  import { Input } from '$lib/components/ui/input';
+  import { Label } from '$lib/components/ui/label';
   import { Textarea } from '$lib/components/ui/textarea';
 
   const projectId = $page.params.id!;
   const config = createProjectConfigStore(projectId);
 
   let specInput = $state('');
+  let specUrl = $state('');
+  let headerKey = $state('');
+  let headerVal = $state('');
+  let urlHeaders = $state<Record<string, string>>({});
   let importSuccess = $state('');
+  let importError = $state('');
 
   const project = createQuery(() => ({
     queryKey: ['projects', projectId],
@@ -23,17 +31,46 @@
     },
   }));
 
-  async function handleImport() {
+  async function handlePasteImport() {
+    importError = '';
+    importSuccess = '';
     const { data, error } = await api.POST('/api/projects/{project-id}/specs', {
       params: { path: { 'project-id': projectId } },
       body: specInput,
       bodySerializer: (body) => body as unknown as string,
     });
-    if (error) return;
+    if (error) { importError = (error as any).detail ?? 'Import failed'; return; }
     if (data) {
       importSuccess = `Imported: ${data.title} v${data.version} (${data.operations?.length ?? 0} operations)`;
       specInput = '';
     }
+  }
+
+  async function handleUrlImport() {
+    importError = '';
+    importSuccess = '';
+    const { data, error } = await api.POST('/api/projects/{project-id}/specs/from-url', {
+      params: { path: { 'project-id': projectId } },
+      body: { url: specUrl, headers: Object.keys(urlHeaders).length > 0 ? urlHeaders : undefined },
+    });
+    if (error) { importError = (error as any).detail ?? 'Import failed'; return; }
+    if (data) {
+      importSuccess = `Imported: ${data.title} v${data.version} (${data.operations?.length ?? 0} operations)`;
+      specUrl = '';
+      urlHeaders = {};
+    }
+  }
+
+  function addUrlHeader() {
+    if (!headerKey) return;
+    urlHeaders = { ...urlHeaders, [headerKey]: headerVal };
+    headerKey = '';
+    headerVal = '';
+  }
+
+  function removeUrlHeader(key: string) {
+    const { [key]: _, ...rest } = urlHeaders;
+    urlHeaders = rest;
   }
 
   const navItems = [
@@ -89,11 +126,46 @@
   <!-- Spec import -->
   <Card.Root>
     <Card.Header><Card.Title class="text-base">Import OpenAPI Spec</Card.Title></Card.Header>
-    <Card.Content class="space-y-3">
-      <Textarea bind:value={specInput} class="min-h-[10rem] font-mono text-xs" placeholder="Paste OpenAPI JSON or YAML here…" />
-      <Button onclick={handleImport} disabled={!specInput.trim()}>Import</Button>
+    <Card.Content>
+      <Tabs.Root value="url">
+        <Tabs.List>
+          <Tabs.Trigger value="url">From URL</Tabs.Trigger>
+          <Tabs.Trigger value="paste">Paste</Tabs.Trigger>
+        </Tabs.List>
+
+        <Tabs.Content value="url" class="space-y-3 pt-3">
+          <div class="space-y-1">
+            <Label>Spec URL</Label>
+            <Input bind:value={specUrl} placeholder="https://api.example.com/openapi.json" />
+          </div>
+          <div class="space-y-2">
+            <Label>Custom Headers (optional)</Label>
+            {#each Object.entries(urlHeaders) as [k, v] (k)}
+              <div class="flex items-center gap-2">
+                <Badge variant="outline" class="font-mono text-xs">{k}: {v}</Badge>
+                <Button variant="ghost" size="xs" onclick={() => removeUrlHeader(k)}>×</Button>
+              </div>
+            {/each}
+            <div class="flex gap-2">
+              <Input bind:value={headerKey} placeholder="Header name" class="flex-1" />
+              <Input bind:value={headerVal} placeholder="Value" class="flex-1" />
+              <Button variant="outline" size="sm" onclick={addUrlHeader}>Add</Button>
+            </div>
+          </div>
+          <Button onclick={handleUrlImport} disabled={!specUrl.trim()}>Import from URL</Button>
+        </Tabs.Content>
+
+        <Tabs.Content value="paste" class="space-y-3 pt-3">
+          <Textarea bind:value={specInput} class="min-h-[10rem] font-mono text-xs" placeholder="Paste OpenAPI JSON or YAML here…" />
+          <Button onclick={handlePasteImport} disabled={!specInput.trim()}>Import</Button>
+        </Tabs.Content>
+      </Tabs.Root>
+
       {#if importSuccess}
-        <p class="text-sm text-primary">{importSuccess}</p>
+        <p class="mt-3 text-sm text-primary">{importSuccess}</p>
+      {/if}
+      {#if importError}
+        <p class="mt-3 text-sm text-destructive">{importError}</p>
       {/if}
     </Card.Content>
   </Card.Root>

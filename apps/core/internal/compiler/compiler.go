@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/fanboykun/smokery/apps/core/internal/model"
@@ -77,6 +78,22 @@ func Compile(input Input) Output {
 	}
 	if env != nil {
 		plan.Environment = *env
+	}
+
+	// Resolve auth profile
+	authID := ""
+	if len(input.Config.Flows) > 0 && input.Config.Flows[0].Auth != "" {
+		authID = input.Config.Flows[0].Auth
+	} else if len(input.Config.Suites) > 0 && input.Config.Suites[0].Auth != "" {
+		authID = input.Config.Suites[0].Auth
+	}
+	if authID != "" {
+		for i := range input.Config.AuthProfiles {
+			if input.Config.AuthProfiles[i].ID == authID {
+				plan.Auth = &input.Config.AuthProfiles[i]
+				break
+			}
+		}
 	}
 
 	return Output{Plan: plan, Warnings: warnings}
@@ -275,11 +292,18 @@ func matchSelector(op spec.OperationInfo, sel model.SuiteSelector) bool {
 		}
 	}
 	for _, p := range sel.Paths {
-		if p == op.Path {
+		if matchPath(p, op.Path) {
 			return true
 		}
 	}
 	return false
+}
+
+func matchPath(pattern, path string) bool {
+	if strings.HasSuffix(pattern, "*") {
+		return strings.HasPrefix(path, strings.TrimSuffix(pattern, "*"))
+	}
+	return pattern == path
 }
 
 func resolveEnv(id string, envs []model.Environment) *model.Environment {

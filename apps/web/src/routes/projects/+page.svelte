@@ -31,6 +31,12 @@
       name = '';
     },
   }));
+
+  async function deleteProject(id: string) {
+    if (!confirm('Delete this project?')) return;
+    await api.DELETE('/api/projects/{id}', { params: { path: { id } } });
+    queryClient.invalidateQueries({ queryKey: ['projects'] });
+  }
 </script>
 
 <main class="mx-auto max-w-5xl px-6 py-8">
@@ -72,6 +78,7 @@
               <Button variant="outline" size="sm" href="/projects/{project.id}/environments">Config</Button>
               <Button variant="outline" size="sm" href="/projects/{project.id}/plan">Plan</Button>
               <Button size="sm" href="/projects/{project.id}/runs">Runs</Button>
+              <Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); deleteProject(project.id); }}>Delete</Button>
             </Card.Footer>
           </Card.Root>
         </a>

@@ -144,6 +144,21 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.Use(middleware.Recover())
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogURI:      true,
+		LogStatus:   true,
+		LogMethod:   true,
+		LogLatency:  true,
+		LogError:    true,
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			evt := log.Info().Str("method", v.Method).Str("uri", v.URI).Int("status", v.Status).Dur("latency", v.Latency)
+			if v.Error != nil {
+				evt = evt.Err(v.Error)
+			}
+			evt.Msg("request")
+			return nil
+		},
+	}))
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{stdhttp.MethodGet, stdhttp.MethodPost, stdhttp.MethodPut, stdhttp.MethodDelete, stdhttp.MethodOptions},

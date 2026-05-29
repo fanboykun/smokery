@@ -44,9 +44,12 @@ func Parse(raw []byte) (*Analysis, error) {
 		return nil, fmt.Errorf("parse openapi: %w", err)
 	}
 	model, errs := doc.BuildV3Model()
-	if errs != nil {
+	if model == nil {
+		// Only fail if we got no model at all
 		return nil, fmt.Errorf("build model: %w", errs)
 	}
+	// Circular references are common in real specs — treat as warnings, not errors.
+	// libopenapi still builds a usable model despite circular refs.
 
 	analysis := &Analysis{
 		Title:   model.Model.Info.Title,

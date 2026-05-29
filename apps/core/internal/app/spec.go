@@ -3,6 +3,9 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/google/uuid"
 
@@ -62,4 +65,27 @@ func (s *SpecService) Get(ctx context.Context, id uuid.UUID) (*model.Spec, error
 
 func (s *SpecService) ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.Spec, error) {
 	return s.specs.ListByProject(ctx, projectID)
+}
+
+func (s *SpecService) ImportFromURL(ctx context.Context, projectID uuid.UUID, url string, headers map[string]string) (*ImportSpecResult, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("download spec: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("download spec: status %d", resp.StatusCode)
+	}
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 50<<20)) // 50MB limit
+	if err != nil {
+		return nil, fmt.Errorf("read spec body: %w", err)
+	}
+	return s.Import(ctx, projectID, raw)
 }

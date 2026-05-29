@@ -37,6 +37,30 @@
     enabled: run.data?.status === 'completed' || run.data?.status === 'failed',
   }));
 
+  const ciReport = createQuery(() => ({
+    queryKey: ['run-ci', runId],
+    queryFn: async () => {
+      const { data, error } = await api.GET('/api/runs/{id}/report/ci', { params: { path: { id: runId } } });
+      if (error) throw error;
+      return data!;
+    },
+    enabled: run.data?.status === 'completed' || run.data?.status === 'failed',
+  }));
+
+  const runResult = createQuery(() => ({
+    queryKey: ['run-result', runId],
+    queryFn: async () => {
+      const { data, error } = await api.GET('/api/runs/{id}/result', { params: { path: { id: runId } } });
+      if (error) throw error;
+      const raw = data!.result as string;
+      // Try JSON first, then base64-decoded JSON
+      try { return JSON.parse(raw); } catch {}
+      try { return JSON.parse(atob(raw)); } catch {}
+      return null;
+    },
+    enabled: run.data?.status === 'completed' || run.data?.status === 'failed',
+  }));
+
   const mermaid = createQuery(() => ({
     queryKey: ['run-mermaid', runId],
     queryFn: async () => {
@@ -76,6 +100,88 @@
       <Button variant="outline" href="/runs/{runId}/comments">Comments</Button>
     </div>
   </div>
+
+  <!-- CI Summary -->
+  {#if ciReport.data}
+    <Card.Root class="mb-4">
+      <Card.Header><Card.Title class="text-base">Summary</Card.Title></Card.Header>
+      <Card.Content>
+        <div class="flex flex-wrap gap-4 text-sm">
+          <span>Status: <Badge variant={statusVariant(ciReport.data.status)}>{ciReport.data.status}</Badge></span>
+          <span class="text-primary font-bold">{ciReport.data.passed} passed</span>
+          <span class="text-destructive font-bold">{ciReport.data.failed} failed</span>
+          <span class="text-muted-foreground">{ciReport.data.total} total • {ciReport.data.duration_ms}ms</span>
+        </div>
+        {#if ciReport.data.failures && ciReport.data.failures.length > 0}
+          <details class="mt-3">
+            <summary class="cursor-pointer text-xs font-bold text-destructive">Failed cases ({ciReport.data.failures.length})</summary>
+            <div class="mt-2 max-h-48 overflow-y-auto space-y-1">
+              {#each ciReport.data.failures as f}
+                <p class="text-xs text-muted-foreground font-mono">{f}</p>
+              {/each}
+            </div>
+          </details>
+        {/if}
+      </Card.Content>
+    </Card.Root>
+  {/if}
+
+  <!-- Run Result Details (actual errors) -->
+  {#if runResult.data}
+    {@const res = runResult.data}
+    <Card.Root class="mb-4">
+      <Card.Header><Card.Title class="text-base">Step Results</Card.Title></Card.Header>
+      <Card.Content class="max-h-96 overflow-y-auto space-y-1">
+        {#if res.suites}
+          {#each res.suites as suite}
+            <p class="text-xs font-bold mt-2">{suite.name} ({suite.status})</p>
+            {#each (suite.cases ?? []).slice(0, 20) as c}
+              <div class="rounded-md px-2 py-1 text-xs {c.step?.status === 'passed' ? 'bg-primary/10' : 'bg-destructive/10'}">
+                <span class="font-mono font-bold">{c.step?.request?.method} {c.step?.request?.url?.replace(/https?:\/\/[^/]+/, '')}</span>
+                {#if c.step?.response?.status}
+                  <Badge variant={c.step.response.status < 400 ? 'default' : 'destructive'} class="ml-2 text-[0.6rem]">{c.step.response.status}</Badge>
+                {/if}
+                {#if c.step?.error}
+                  <p class="text-destructive mt-0.5">{c.step.error}</p>
+                {/if}
+                {#if c.step?.status !== 'passed' && c.step?.response?.body}
+                  <details class="mt-1">
+                    <summary class="cursor-pointer text-muted-foreground">Response body</summary>
+                    <pre class="mt-1 max-h-32 overflow-auto rounded bg-background p-2 text-[0.65rem]">{JSON.stringify(c.step.response.body, null, 2)}</pre>
+                  </details>
+                {/if}
+                {#if c.step?.status !== 'passed' && c.step?.request?.headers}
+                  <details class="mt-1">
+                    <summary class="cursor-pointer text-muted-foreground">Request headers</summary>
+                    <pre class="mt-1 max-h-20 overflow-auto rounded bg-background p-2 text-[0.65rem]">{JSON.stringify(c.step.request.headers, null, 2)}</pre>
+                  </details>
+                {/if}
+              </div>
+            {/each}
+            {#if (suite.cases ?? []).length > 20}
+              <p class="text-xs text-muted-foreground">… and {(suite.cases ?? []).length - 20} more cases</p>
+            {/if}
+          {/each}
+        {/if}
+        {#if res.flows}
+          {#each res.flows as flow}
+            <p class="text-xs font-bold mt-2">{flow.name} ({flow.status})</p>
+            {#each flow.steps ?? [] as step}
+              <div class="rounded-md px-2 py-1 text-xs {step.status === 'passed' ? 'bg-primary/10' : 'bg-destructive/10'}">
+                <span class="font-mono font-bold">{step.request?.method} {step.request?.url?.replace(/https?:\/\/[^/]+/, '')}</span>
+                {#if step.response?.status}
+                  <Badge variant={step.response.status < 400 ? 'default' : 'destructive'} class="ml-2 text-[0.6rem]">{step.response.status}</Badge>
+                {/if}
+                {#if step.error}
+                  <p class="text-destructive mt-0.5">{step.error}</p>
+                {/if}
+              </div>
+            {/each}
+          {/each}
+        {/if}
+      </Card.Content>
+    </Card.Root>
+  {/if}
 
   <!-- Debug Report -->
   {#if debugReport.data}

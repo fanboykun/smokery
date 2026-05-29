@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/fanboykun/smokery/apps/core/internal/model"
 	"github.com/fanboykun/smokery/apps/core/internal/runner/hook"
 )
@@ -39,6 +41,8 @@ func (r *Runner) Execute(ctx context.Context, plan *model.SmokePlan) *model.RunR
 
 	r.emit("run_started", map[string]string{"run_id": plan.ID})
 
+	log.Info().Str("run_id", plan.ID).Str("env", plan.Environment.Name).Int("flows", len(plan.FlowPlans)).Int("suites", len(plan.SuitePlans)).Msg("smoke run started")
+
 	vars := make(map[string]any)
 
 	for _, fp := range plan.FlowPlans {
@@ -59,6 +63,7 @@ func (r *Runner) Execute(ctx context.Context, plan *model.SmokePlan) *model.RunR
 
 	result.FinishedAt = time.Now()
 	result.Duration = time.Since(start).Milliseconds()
+	log.Info().Str("run_id", plan.ID).Str("status", result.Status).Int64("duration_ms", result.Duration).Msg("smoke run finished")
 	r.emit("run_finished", result)
 	return result
 }
@@ -157,6 +162,7 @@ func (r *Runner) executeStep(ctx context.Context, step *model.PlannedStep, plan 
 		result.Status = "error"
 		result.Error = err.Error()
 		result.Duration = time.Since(start).Milliseconds()
+		log.Error().Str("step", step.Name).Str("method", step.Method).Str("url", req.URL.String()).Err(err).Msg("step request failed")
 		return result
 	}
 	defer resp.Body.Close()
@@ -186,6 +192,11 @@ func (r *Runner) executeStep(ctx context.Context, step *model.PlannedStep, plan 
 	}
 
 	result.Duration = time.Since(start).Milliseconds()
+	lvl := log.Debug()
+	if result.Status != "passed" {
+		lvl = log.Warn()
+	}
+	lvl.Str("step", step.Name).Str("method", step.Method).Str("url", req.URL.String()).Int("status", resp.StatusCode).Str("result", result.Status).Int64("ms", result.Duration).Msg("step done")
 	return result
 }
 

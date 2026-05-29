@@ -120,8 +120,25 @@ export interface paths {
         /** List API projects by project ID specs */
         get: operations["list-api-projects-by-project-id-specs"];
         put?: never;
-        /** Import OpenAPI spec */
+        /** Import OpenAPI spec from raw body */
         post: operations["import-spec"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project-id}/specs/from-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import OpenAPI spec from URL */
+        post: operations["import-spec-from-url"];
         delete?: never;
         options?: never;
         head?: never;
@@ -537,6 +554,20 @@ export interface components {
             db: string;
             /** @example ok */
             status: string;
+        };
+        ImportSpecFromURLInputBody: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/ImportSpecFromURLInputBody.json
+             */
+            readonly $schema?: string;
+            /** @description Custom headers for downloading (e.g. Authorization) */
+            headers?: {
+                [key: string]: string;
+            };
+            /** @description URL to download the OpenAPI spec from */
+            url: string;
         };
         Operation: {
             /**
@@ -1133,6 +1164,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/octet-stream": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Analysis"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "import-spec-from-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project UUID */
+                "project-id": string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImportSpecFromURLInputBody"];
             };
         };
         responses: {
