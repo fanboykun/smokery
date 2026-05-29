@@ -5,9 +5,15 @@
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import * as AlertDialog from '$lib/components/ui/alert-dialog';
+  import { EllipsisVertical } from '@lucide/svelte';
 
   const queryClient = useQueryClient();
   let name = $state('');
+  let deleteTarget = $state<{ id: string; name: string } | null>(null);
+  let confirmText = $state('');
+  let alertOpen = $state(false);
 
   const projects = createQuery(() => ({
     queryKey: ['projects'],
@@ -32,10 +38,13 @@
     },
   }));
 
-  async function deleteProject(id: string) {
-    if (!confirm('Delete this project?')) return;
-    await api.DELETE('/api/projects/{id}', { params: { path: { id } } });
+  async function deleteProject() {
+    if (!deleteTarget || confirmText !== deleteTarget.name) return;
+    await api.DELETE('/api/projects/{id}', { params: { path: { id: deleteTarget.id } } });
     queryClient.invalidateQueries({ queryKey: ['projects'] });
+    alertOpen = false;
+    deleteTarget = null;
+    confirmText = '';
   }
 </script>
 
@@ -78,7 +87,25 @@
               <Button variant="outline" size="sm" href="/projects/{project.id}/environments">Config</Button>
               <Button variant="outline" size="sm" href="/projects/{project.id}/plan">Plan</Button>
               <Button size="sm" href="/projects/{project.id}/runs">Runs</Button>
-              <Button variant="destructive" size="sm" onclick={(e) => { e.preventDefault(); e.stopPropagation(); deleteProject(project.id); }}>Delete</Button>
+              <div class="ml-auto" onclick={(e) => e.preventDefault()} role="none">
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger>
+                    {#snippet child({ props })}
+                      <button {...props} class="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted" aria-label="More actions">
+                        <EllipsisVertical class="size-4" />
+                      </button>
+                    {/snippet}
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content align="end">
+                    <DropdownMenu.Item
+                      class="text-destructive"
+                      onclick={() => { deleteTarget = { id: project.id, name: project.name }; confirmText = ''; alertOpen = true; }}
+                    >
+                      Delete project
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
+              </div>
             </Card.Footer>
           </Card.Root>
         </a>
@@ -92,3 +119,20 @@
     </Card.Root>
   {/if}
 </main>
+
+<!-- Delete confirmation -->
+<AlertDialog.Root bind:open={alertOpen}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Delete project</AlertDialog.Title>
+      <AlertDialog.Description>
+        This action cannot be undone. Type <strong class="text-foreground">{deleteTarget?.name}</strong> to confirm.
+      </AlertDialog.Description>
+    </AlertDialog.Header>
+    <Input bind:value={confirmText} placeholder={deleteTarget?.name ?? ''} class="mt-2" />
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel onclick={() => { alertOpen = false; deleteTarget = null; confirmText = ''; }}>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action disabled={confirmText !== deleteTarget?.name} onclick={deleteProject}>Delete</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>

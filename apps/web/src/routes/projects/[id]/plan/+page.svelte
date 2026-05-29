@@ -9,6 +9,7 @@
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
   import Breadcrumb from '$lib/components/Breadcrumb.svelte';
+  import { Loader2 } from '@lucide/svelte';
   import type { components } from '$lib/api/v1';
 
   type CompilerOutput = components['schemas']['Output'];
@@ -46,6 +47,16 @@
   const hasErrors = $derived((result?.errors?.length ?? 0) > 0);
   const hasWarnings = $derived((result?.warnings?.length ?? 0) > 0);
   const plan = $derived(result?.plan);
+
+  // Group warnings by message to collapse duplicates
+  const groupedWarnings = $derived(
+    (result?.warnings ?? []).reduce<{ message: string; stage: string; items: NonNullable<typeof result>['warnings'] }[]>((acc, w) => {
+      const existing = acc.find((g) => g.message === w.message);
+      if (existing) existing.items!.push(w);
+      else acc.push({ message: w.message, stage: w.stage, items: [w] });
+      return acc;
+    }, []),
+  );
   const totalFlowSteps = $derived(plan?.flow_plans?.reduce((n, f) => n + (f.steps?.length ?? 0), 0) ?? 0);
   const totalCases = $derived(plan?.suite_plans?.reduce((n, s) => n + (s.cases?.length ?? 0), 0) ?? 0);
 
@@ -74,10 +85,12 @@
     <div class="flex gap-2">
       <Button variant="outline" href="/projects/{projectId}/environments">← Config</Button>
       <Button onclick={() => compile.mutate()} disabled={compile.isPending}>
+        {#if compile.isPending}<Loader2 class="size-4 animate-spin" />{/if}
         {compile.isPending ? 'Compiling…' : '▶ Compile'}
       </Button>
       {#if plan && !hasErrors}
         <Button variant="default" onclick={() => startRun.mutate()} disabled={startRun.isPending}>
+          {#if startRun.isPending}<Loader2 class="size-4 animate-spin" />{/if}
           {startRun.isPending ? 'Starting…' : '🚀 Run'}
         </Button>
       {/if}
@@ -121,17 +134,28 @@
       </Card.Root>
     {/if}
 
-    <!-- Warnings -->
+    <!-- Warnings (grouped) -->
     {#if hasWarnings}
       <Card.Root class="mb-4 border-yellow-600/50">
         <Card.Header><Card.Title class="text-base text-yellow-500">Warnings ({result.warnings!.length})</Card.Title></Card.Header>
         <Card.Content class="space-y-2">
-          {#each result.warnings! as warn}
+          {#each groupedWarnings as group (group.message)}
             <div class="flex items-start gap-2 rounded-md bg-yellow-500/10 p-2 text-sm">
-              <Badge variant="outline" class="shrink-0 text-[0.6rem] text-yellow-500">{warn.stage}</Badge>
-              <div>
-                <p class="font-medium">{warn.message}</p>
-                <p class="text-xs text-muted-foreground">{warn.path}{warn.entity ? ` (${warn.entity})` : ''}</p>
+              <Badge variant="outline" class="shrink-0 text-[0.6rem] text-yellow-500">{group.stage}</Badge>
+              <div class="min-w-0 flex-1">
+                <p class="font-medium">{group.message}</p>
+                {#if group.items!.length > 1}
+                  <details class="mt-1">
+                    <summary class="cursor-pointer text-xs text-muted-foreground">×{group.items!.length} occurrences</summary>
+                    <ul class="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                      {#each group.items! as w}
+                        <li>{w.path}{w.entity ? ` (${w.entity})` : ''}</li>
+                      {/each}
+                    </ul>
+                  </details>
+                {:else}
+                  <p class="text-xs text-muted-foreground">{group.items![0].path}{group.items![0].entity ? ` (${group.items![0].entity})` : ''}</p>
+                {/if}
               </div>
             </div>
           {/each}

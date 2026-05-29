@@ -15,6 +15,8 @@
   }
 
   let events = $state<RunEvent[]>([]);
+  let statusFilter = $state('all');
+  let stepsExpanded = $state(true);
   const runId = $page.params.runId!;
 
   const run = createQuery(() => ({
@@ -53,7 +55,6 @@
       const { data, error } = await api.GET('/api/runs/{id}/result', { params: { path: { id: runId } } });
       if (error) throw error;
       const raw = data!.result as string;
-      // Try JSON first, then base64-decoded JSON
       try { return JSON.parse(raw); } catch {}
       try { return JSON.parse(atob(raw)); } catch {}
       return null;
@@ -85,19 +86,65 @@
     if (status === 'failed') return 'destructive' as const;
     return 'secondary' as const;
   }
+
+  // Collect all steps from result for filtering
+  interface FlatStep { method?: string; url?: string; status?: number; error?: string; stepStatus?: string; response?: unknown; request?: unknown; source: string }
+
+  const allSteps = $derived.by(() => {
+    if (!runResult.data) return [] as FlatStep[];
+    const res = runResult.data;
+    const steps: FlatStep[] = [];
+    for (const suite of res.suites ?? []) {
+      for (const c of suite.cases ?? []) {
+        if (c.step) steps.push({ method: c.step.request?.method, url: c.step.request?.url, status: c.step.response?.status, error: c.step.error, stepStatus: c.step.status, response: c.step.response, request: c.step.request, source: suite.name });
+      }
+    }
+    for (const flow of res.flows ?? []) {
+      for (const step of flow.steps ?? []) {
+        steps.push({ method: step.request?.method, url: step.request?.url, status: step.response?.status, error: step.error, stepStatus: step.status, response: step.response, request: step.request, source: flow.name });
+      }
+    }
+    return steps;
+  });
+
+  // Group failures by status code
+  const failuresByStatus = $derived.by(() => {
+    const failures = allSteps.filter((s) => s.stepStatus !== 'passed');
+    const groups: Record<string, FlatStep[]> = {};
+    for (const f of failures) {
+      const key = f.status ? String(f.status) : 'no-response';
+      (groups[key] ??= []).push(f);
+    }
+    return groups;
+  });
+
+  const statusCodes = $derived(Object.keys(failuresByStatus).sort());
+
+  const filteredSteps = $derived(
+    statusFilter === 'all'
+      ? allSteps
+      : statusFilter === 'failed'
+        ? allSteps.filter((s) => s.stepStatus !== 'passed')
+        : allSteps.filter((s) => String(s.status) === statusFilter),
+  );
+
+  function shortUrl(url?: string) {
+    if (!url) return '';
+    return url.replace(/https?:\/\/[^/]+/, '');
+  }
 </script>
 
-<main class="mx-auto max-w-5xl px-6 py-8">
-  <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-    <div>
+<main class="mx-auto max-w-5xl px-4 py-8 sm:px-6 overflow-x-hidden">
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div class="min-w-0">
       <p class="text-xs font-bold uppercase tracking-widest text-primary">Run Detail</p>
-      <h1 class="text-2xl font-bold font-mono">{runId.slice(0, 8)}</h1>
+      <h1 class="truncate text-2xl font-bold font-mono">{runId.slice(0, 8)}</h1>
     </div>
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
       {#if run.data}
         <Badge variant={statusVariant(run.data.status)}>{run.data.status}</Badge>
       {/if}
-      <Button variant="outline" href="/runs/{runId}/comments">Comments</Button>
+      <Button variant="outline" size="sm" href="/runs/{runId}/comments">Comments</Button>
     </div>
   </div>
 
@@ -106,7 +153,7 @@
     <Card.Root class="mb-4">
       <Card.Header><Card.Title class="text-base">Summary</Card.Title></Card.Header>
       <Card.Content>
-        <div class="flex flex-wrap gap-4 text-sm">
+        <div class="flex flex-wrap gap-3 text-sm">
           <span>Status: <Badge variant={statusVariant(ciReport.data.status)}>{ciReport.data.status}</Badge></span>
           <span class="text-primary font-bold">{ciReport.data.passed} passed</span>
           <span class="text-destructive font-bold">{ciReport.data.failed} failed</span>
@@ -117,7 +164,7 @@
             <summary class="cursor-pointer text-xs font-bold text-destructive">Failed cases ({ciReport.data.failures.length})</summary>
             <div class="mt-2 max-h-48 overflow-y-auto space-y-1">
               {#each ciReport.data.failures as f}
-                <p class="text-xs text-muted-foreground font-mono">{f}</p>
+                <p class="break-all text-xs text-muted-foreground font-mono">{f}</p>
               {/each}
             </div>
           </details>
@@ -126,60 +173,57 @@
     </Card.Root>
   {/if}
 
-  <!-- Run Result Details (actual errors) -->
-  {#if runResult.data}
-    {@const res = runResult.data}
+  <!-- Step Results with filter and collapse -->
+  {#if allSteps.length > 0}
     <Card.Root class="mb-4">
-      <Card.Header><Card.Title class="text-base">Step Results</Card.Title></Card.Header>
-      <Card.Content class="max-h-96 overflow-y-auto space-y-1">
-        {#if res.suites}
-          {#each res.suites as suite}
-            <p class="text-xs font-bold mt-2">{suite.name} ({suite.status})</p>
-            {#each (suite.cases ?? []).slice(0, 20) as c}
-              <div class="rounded-md px-2 py-1 text-xs {c.step?.status === 'passed' ? 'bg-primary/10' : 'bg-destructive/10'}">
-                <span class="font-mono font-bold">{c.step?.request?.method} {c.step?.request?.url?.replace(/https?:\/\/[^/]+/, '')}</span>
-                {#if c.step?.response?.status}
-                  <Badge variant={c.step.response.status < 400 ? 'default' : 'destructive'} class="ml-2 text-[0.6rem]">{c.step.response.status}</Badge>
-                {/if}
-                {#if c.step?.error}
-                  <p class="text-destructive mt-0.5">{c.step.error}</p>
-                {/if}
-                {#if c.step?.status !== 'passed' && c.step?.response?.body}
-                  <details class="mt-1">
-                    <summary class="cursor-pointer text-muted-foreground">Response body</summary>
-                    <pre class="mt-1 max-h-32 overflow-auto rounded bg-background p-2 text-[0.65rem]">{JSON.stringify(c.step.response.body, null, 2)}</pre>
-                  </details>
-                {/if}
-                {#if c.step?.status !== 'passed' && c.step?.request?.headers}
-                  <details class="mt-1">
-                    <summary class="cursor-pointer text-muted-foreground">Request headers</summary>
-                    <pre class="mt-1 max-h-20 overflow-auto rounded bg-background p-2 text-[0.65rem]">{JSON.stringify(c.step.request.headers, null, 2)}</pre>
-                  </details>
+      <Card.Header class="flex-row flex-wrap items-center justify-between gap-2">
+        <Card.Title class="text-base">Step Results ({allSteps.length})</Card.Title>
+        <div class="flex items-center gap-2">
+          <select
+            class="rounded-md border border-input bg-background px-2 py-1 text-xs"
+            bind:value={statusFilter}
+          >
+            <option value="all">All</option>
+            <option value="failed">Failed only</option>
+            {#each statusCodes as code (code)}
+              <option value={code}>{code} ({failuresByStatus[code].length})</option>
+            {/each}
+          </select>
+          <button
+            class="text-xs text-muted-foreground hover:text-foreground"
+            onclick={() => stepsExpanded = !stepsExpanded}
+          >
+            {stepsExpanded ? '▼ Collapse' : '▶ Expand'}
+          </button>
+        </div>
+      </Card.Header>
+      {#if stepsExpanded}
+        <Card.Content class="max-h-[32rem] overflow-y-auto space-y-1">
+          {#each filteredSteps.slice(0, 50) as step}
+            <div class="rounded-md px-2 py-1.5 text-xs {step.stepStatus === 'passed' ? 'bg-primary/10' : 'bg-destructive/10'}">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="shrink-0 font-mono font-bold">{step.method}</span>
+                <span class="min-w-0 break-all">{shortUrl(step.url)}</span>
+                {#if step.status}
+                  <Badge variant={step.status < 400 ? 'default' : 'destructive'} class="ml-auto shrink-0 text-[0.6rem]">{step.status}</Badge>
                 {/if}
               </div>
-            {/each}
-            {#if (suite.cases ?? []).length > 20}
-              <p class="text-xs text-muted-foreground">… and {(suite.cases ?? []).length - 20} more cases</p>
-            {/if}
+              {#if step.error}
+                <p class="mt-0.5 break-all text-destructive">{step.error}</p>
+              {/if}
+              {#if step.stepStatus !== 'passed' && step.response}
+                <details class="mt-1">
+                  <summary class="cursor-pointer text-muted-foreground">Response body</summary>
+                  <pre class="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded bg-background p-2 text-[0.65rem]">{JSON.stringify((step.response as any).body, null, 2)}</pre>
+                </details>
+              {/if}
+            </div>
           {/each}
-        {/if}
-        {#if res.flows}
-          {#each res.flows as flow}
-            <p class="text-xs font-bold mt-2">{flow.name} ({flow.status})</p>
-            {#each flow.steps ?? [] as step}
-              <div class="rounded-md px-2 py-1 text-xs {step.status === 'passed' ? 'bg-primary/10' : 'bg-destructive/10'}">
-                <span class="font-mono font-bold">{step.request?.method} {step.request?.url?.replace(/https?:\/\/[^/]+/, '')}</span>
-                {#if step.response?.status}
-                  <Badge variant={step.response.status < 400 ? 'default' : 'destructive'} class="ml-2 text-[0.6rem]">{step.response.status}</Badge>
-                {/if}
-                {#if step.error}
-                  <p class="text-destructive mt-0.5">{step.error}</p>
-                {/if}
-              </div>
-            {/each}
-          {/each}
-        {/if}
-      </Card.Content>
+          {#if filteredSteps.length > 50}
+            <p class="text-xs text-muted-foreground">… and {filteredSteps.length - 50} more</p>
+          {/if}
+        </Card.Content>
+      {/if}
     </Card.Root>
   {/if}
 
@@ -188,7 +232,7 @@
     <Card.Root class="mb-4">
       <Card.Header><Card.Title class="text-base">Debug Report</Card.Title></Card.Header>
       <Card.Content class="space-y-3">
-        <div class="flex gap-4 text-sm">
+        <div class="flex flex-wrap gap-3 text-sm">
           <span>Status: <Badge variant={statusVariant(debugReport.data.status)}>{debugReport.data.status}</Badge></span>
           <span class="text-muted-foreground">{debugReport.data.duration_ms}ms</span>
         </div>
@@ -197,8 +241,8 @@
             <p class="text-xs font-bold uppercase text-destructive">Failures</p>
             {#each debugReport.data.failures as f}
               <div class="rounded-md bg-destructive/10 p-2 text-xs">
-                <p class="font-medium">{f.step}: {f.assertion}</p>
-                <p class="text-muted-foreground">{f.message} — {f.request_url} ({f.status})</p>
+                <p class="font-medium break-all">{f.step}: {f.assertion}</p>
+                <p class="break-all text-muted-foreground">{f.message} — {f.request_url} ({f.status})</p>
               </div>
             {/each}
           </div>
@@ -207,8 +251,8 @@
           <div class="space-y-1">
             <p class="text-xs font-bold uppercase text-muted-foreground">Traces</p>
             {#each debugReport.data.traces as t}
-              <div class="flex gap-2 text-xs text-muted-foreground">
-                <span>{t.step}</span>
+              <div class="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                <span class="break-all">{t.step}</span>
                 {#if t.trace_id}<Badge variant="outline" class="text-[0.6rem]">trace:{t.trace_id.slice(0, 8)}</Badge>{/if}
                 {#if t.request_id}<Badge variant="outline" class="text-[0.6rem]">req:{t.request_id.slice(0, 8)}</Badge>{/if}
               </div>
@@ -223,7 +267,7 @@
   {#if mermaid.data}
     <Card.Root class="mb-4">
       <Card.Header><Card.Title class="text-base">Sequence Diagram</Card.Title></Card.Header>
-      <Card.Content>
+      <Card.Content class="overflow-x-auto">
         <MermaidDiagram code={mermaid.data} />
       </Card.Content>
     </Card.Root>
@@ -235,9 +279,9 @@
       <Card.Header><Card.Title class="text-base">Live Events ({events.length})</Card.Title></Card.Header>
       <Card.Content class="max-h-64 space-y-1 overflow-y-auto">
         {#each events as ev, i (i)}
-          <div class="flex gap-2 rounded-md bg-secondary/50 px-2 py-1 text-xs">
+          <div class="flex flex-wrap gap-2 rounded-md bg-secondary/50 px-2 py-1 text-xs">
             <Badge variant="outline" class="text-[0.6rem]">{ev.type}</Badge>
-            <span class="truncate text-muted-foreground">{JSON.stringify(ev.data ?? '')}</span>
+            <span class="min-w-0 break-all text-muted-foreground">{JSON.stringify(ev.data ?? '')}</span>
           </div>
         {/each}
       </Card.Content>

@@ -5,6 +5,10 @@
   const queryClient = new QueryClient();
   let { children } = $props();
 </script>
+<svelte:head>
+  <title>Smokery</title>
+  <meta name="description" content="Smokery is a tool for managing and running your projects with ease. It provides a simple and intuitive interface for organizing your projects, tasks, and dependencies." />
+</svelte:head>
 
 <QueryClientProvider client={queryClient}>
   <div class="min-h-screen">

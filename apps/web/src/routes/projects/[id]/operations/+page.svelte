@@ -106,6 +106,16 @@
       default: return 'text-muted-foreground';
     }
   }
+
+  const tagNames = $derived(Object.keys(grouped));
+
+  // Auto-scroll detail panel when selection changes
+  let detailPanel: HTMLElement | undefined = $state();
+  $effect(() => {
+    if (selectedId && detailPanel) {
+      detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
 </script>
 
 <main class="mx-auto max-w-7xl px-6 py-8">
@@ -142,16 +152,25 @@
         {:else}
           <p class="text-xs text-muted-foreground">{filtered.length} of {operations.data?.length ?? 0} operations</p>
 
+          <!-- Sticky tag navigation -->
+          {#if tagNames.length > 1}
+            <nav class="sticky top-14 z-10 flex flex-wrap gap-1 rounded-md border border-border bg-background/90 p-2 backdrop-blur-sm">
+              {#each tagNames as tag (tag)}
+                <a href="#{tag}" class="rounded px-2 py-0.5 text-xs hover:bg-secondary">{tag}</a>
+              {/each}
+            </nav>
+          {/if}
+
           {#each Object.entries(grouped) as [tag, ops] (tag)}
-            <Card.Root>
+            <Card.Root id={tag}>
               <Card.Header class="flex-row items-center justify-between pb-2">
                 <Card.Title class="text-base">{tag}</Card.Title>
                 <Badge variant="secondary">{ops.length}</Badge>
               </Card.Header>
-              <Card.Content class="space-y-1 p-2">
-                {#each ops as op (op.id)}
+              <Card.Content class="space-y-0 p-2">
+                {#each ops as op, i (op.id)}
                   <button
-                    class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-secondary {selectedId === op.id ? 'bg-secondary ring-1 ring-primary' : ''}"
+                    class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-secondary {selectedId === op.id ? 'bg-secondary ring-1 ring-primary' : ''} {i % 2 === 1 ? 'bg-muted/30' : ''}"
                     onclick={() => (selectedId = op.id)}
                   >
                     <span class="w-14 shrink-0 font-mono text-xs font-bold {methodColor(op.method)}">{op.method}</span>
@@ -169,7 +188,7 @@
       </div>
 
       <!-- Detail panel -->
-      <aside class="space-y-4">
+      <aside class="space-y-4 lg:sticky lg:top-20 lg:self-start" bind:this={detailPanel}>
         {#if selected}
           <Card.Root>
             <Card.Header>
