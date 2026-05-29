@@ -24,12 +24,12 @@ type ProjectHealthStats struct {
 }
 
 type ProjectWithStats struct {
-	ID          uuid.UUID           `json:"id"`
-	Name        string              `json:"name"`
-	Description string              `json:"description"`
-	CreatedAt   time.Time           `json:"created_at"`
-	UpdatedAt   time.Time           `json:"updated_at"`
-	SpecCount   int                 `json:"spec_count"`
-	LastRun     *LastRunInfo        `json:"last_run,omitempty"`
-	Stats       ProjectHealthStats  `json:"stats"`
+	ID          uuid.UUID          `json:"id"`
+	Name        string             `json:"name"`
+	Description string             `json:"description"`
+	CreatedAt   time.Time          `json:"created_at"`
+	UpdatedAt   time.Time          `json:"updated_at"`
+	SpecCount   int                `json:"spec_count"`
+	LastRun     *LastRunInfo       `json:"last_run,omitempty"`
+	Stats       ProjectHealthStats `json:"stats"`
 }
