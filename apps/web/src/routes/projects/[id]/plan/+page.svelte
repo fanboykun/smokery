@@ -9,7 +9,7 @@
   import { Button } from '$lib/components/ui/button';
   import { Separator } from '$lib/components/ui/separator';
   import Breadcrumb from '$lib/components/Breadcrumb.svelte';
-  import { Loader2 } from '@lucide/svelte';
+  import { Loader2, AlertCircle, CheckCircle2 } from '@lucide/svelte';
   import type { components } from '$lib/api/v1';
 
   type CompilerOutput = components['schemas']['Output'];
@@ -118,15 +118,44 @@
   {#if result}
     <!-- Errors -->
     {#if hasErrors}
-      <Card.Root class="mb-4 border-destructive">
-        <Card.Header><Card.Title class="text-base text-destructive">Errors ({result.errors!.length})</Card.Title></Card.Header>
-        <Card.Content class="space-y-2">
+      <Card.Root class="mb-4 border-destructive/50 bg-destructive/5">
+        <Card.Header>
+          <div class="flex items-center gap-2">
+            <AlertCircle class="size-5 text-destructive" />
+            <Card.Title class="text-base text-destructive">Fix {result.errors!.length} error{result.errors!.length > 1 ? 's' : ''}</Card.Title>
+          </div>
+        </Card.Header>
+        <Card.Content class="space-y-3">
           {#each result.errors! as err}
-            <div class="flex items-start gap-2 rounded-md bg-destructive/10 p-2 text-sm">
-              <Badge variant="destructive" class="shrink-0 text-[0.6rem]">{err.stage}</Badge>
-              <div>
-                <p class="font-medium">{err.message}</p>
-                <p class="text-xs text-muted-foreground">{err.path}{err.entity ? ` (${err.entity})` : ''}</p>
+            <div class="flex items-start gap-3 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm">
+              <div class="mt-0.5 flex-shrink-0">
+                <div class="size-2 rounded-full bg-destructive" />
+              </div>
+              <div class="flex-1">
+                <p class="font-medium text-destructive">{err.message}</p>
+                <p class="mt-1 text-xs text-muted-foreground">
+                  {err.path}{err.entity ? ` in ${err.entity}` : ''} (stage: {err.stage})
+                </p>
+                <!-- Action links based on error stage -->
+                {#if err.stage === 'flows' || err.message.includes('flow')}
+                  <div class="mt-2 flex gap-2">
+                    <a href="/projects/{projectId}/flows" class="inline-flex items-center gap-1 rounded-sm bg-destructive/20 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/30 transition-colors">
+                      → Fix Flows
+                    </a>
+                  </div>
+                {:else if err.stage === 'suites' || err.message.includes('suite')}
+                  <div class="mt-2 flex gap-2">
+                    <a href="/projects/{projectId}/suites" class="inline-flex items-center gap-1 rounded-sm bg-destructive/20 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/30 transition-colors">
+                      → Fix Suites
+                    </a>
+                  </div>
+                {:else if err.stage === 'environments' || err.message.includes('environment')}
+                  <div class="mt-2 flex gap-2">
+                    <a href="/projects/{projectId}/environments" class="inline-flex items-center gap-1 rounded-sm bg-destructive/20 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/30 transition-colors">
+                      → Fix Environments
+                    </a>
+                  </div>
+                {/if}
               </div>
             </div>
           {/each}
@@ -165,11 +194,35 @@
 
     <!-- Plan -->
     {#if plan}
-      <div class="mb-4 flex gap-4">
-        <Badge variant="secondary">Environment: {plan.environment.name}</Badge>
-        {#if plan.auth}<Badge variant="secondary">Auth: {plan.auth.name}</Badge>{/if}
-        <Badge variant="secondary">{totalFlowSteps} flow steps</Badge>
-        <Badge variant="secondary">{totalCases} suite cases</Badge>
+      <Card.Root class="mb-6 border-emerald-500/50 bg-emerald-500/5">
+        <Card.Content class="flex items-center justify-between py-4">
+          <div class="flex items-center gap-3">
+            <CheckCircle2 class="size-5 text-emerald-500" />
+            <div>
+              <p class="font-semibold text-emerald-400">Plan compiled successfully</p>
+              <p class="text-xs text-muted-foreground">Ready to run {totalFlowSteps + totalCases} tests</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <Badge variant="secondary">Env: {plan.environment.name}</Badge>
+            {#if plan.auth}<Badge variant="secondary">Auth: {plan.auth.name}</Badge>{/if}
+          </div>
+        </Card.Content>
+      </Card.Root>
+
+      <div class="mb-4 grid grid-cols-4 gap-3">
+        <Card.Root class="text-center">
+          <Card.Content class="py-4"><p class="text-2xl font-bold">{plan.flow_plans?.length ?? 0}</p><p class="text-xs text-muted-foreground">Flows</p></Card.Content>
+        </Card.Root>
+        <Card.Root class="text-center">
+          <Card.Content class="py-4"><p class="text-2xl font-bold">{totalFlowSteps}</p><p class="text-xs text-muted-foreground">Flow Steps</p></Card.Content>
+        </Card.Root>
+        <Card.Root class="text-center">
+          <Card.Content class="py-4"><p class="text-2xl font-bold">{plan.suite_plans?.length ?? 0}</p><p class="text-xs text-muted-foreground">Suites</p></Card.Content>
+        </Card.Root>
+        <Card.Root class="text-center">
+          <Card.Content class="py-4"><p class="text-2xl font-bold">{totalCases}</p><p class="text-xs text-muted-foreground">Test Cases</p></Card.Content>
+        </Card.Root>
       </div>
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
