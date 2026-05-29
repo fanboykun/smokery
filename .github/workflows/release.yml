@@ -2,7 +2,7 @@ name: Release
 
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: ["CI"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -24,11 +24,15 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  version:
     runs-on: ubuntu-latest
     if: |
       (github.event_name == 'workflow_dispatch') ||
       (github.event.workflow_run.conclusion == 'success' && !contains(github.event.workflow_run.head_commit.message, '[skip-release]'))
+    outputs:
+      next: ${{ steps.semver.outputs.next }}
+      current: ${{ steps.semver.outputs.current }}
+      should_release: ${{ steps.decide.outputs.should_release }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,13 +45,7 @@ jobs:
           CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^(apps/core/|configs/Dockerfile)' || true)
           if [ -z "$CHANGED" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Skip if no core changes
-        if: github.event_name == 'workflow_run' && steps.changes.outputs.skip == 'true'
-        run: echo "No core file changes, skipping release." && exit 0
 
       - name: Determine next version
         if: steps.changes.outputs.skip != 'true'
@@ -65,33 +63,71 @@ jobs:
             ${{ github.event.inputs.bump == 'minor' && 'feat: manual minor release' || '' }}
             ${{ github.event.inputs.bump == 'patch' && 'fix: manual patch release' || '' }}
 
-      - name: Skip if no new version
-        if: steps.changes.outputs.skip != 'true' && steps.semver.outputs.next == steps.semver.outputs.current
-        run: echo "No version change, skipping."
+      - name: Decide if release needed
+        id: decide
+        run: |
+          if [ "${{ steps.changes.outputs.skip }}" = "true" ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.semver.outputs.next }}" = "${{ steps.semver.outputs.current }}" ]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: version
+    if: needs.version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
-        if: steps.changes.outputs.skip != 'true' && steps.semver.outputs.next != steps.semver.outputs.current
         with:
           go-version: "1.26"
           cache-dependency-path: apps/core/go.sum
 
-      - name: Build CLI binaries
-        if: steps.changes.outputs.skip != 'true' && steps.semver.outputs.next != steps.semver.outputs.current
+      - name: Build
         working-directory: apps/core
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
         run: |
-          VERSION=${{ steps.semver.outputs.next }}
-          LDFLAGS="-s -w -X main.version=${VERSION}"
-          
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o ../../dist/smokery-linux-amd64 ./cmd/smokery
-          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o ../../dist/smokery-linux-arm64 ./cmd/smokery
-          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o ../../dist/smokery-darwin-amd64 ./cmd/smokery
-          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o ../../dist/smokery-darwin-arm64 ./cmd/smokery
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o ../../dist/smokery-windows-amd64.exe ./cmd/smokery
+          EXT=""
+          if [ "${{ matrix.goos }}" = "windows" ]; then EXT=".exe"; fi
+          go build -ldflags="-s -w -X main.version=${{ needs.version.outputs.next }}" \
+            -o ../../dist/smokery-${{ matrix.goos }}-${{ matrix.goarch }}${EXT} ./cmd/smokery
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smokery-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/*
+
+  publish:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
 
       - name: Create tag and release
-        if: steps.changes.outputs.skip != 'true' && steps.semver.outputs.next != steps.semver.outputs.current
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.semver.outputs.next }}
+          tag_name: ${{ needs.version.outputs.next }}
           generate_release_notes: true
           files: dist/*
