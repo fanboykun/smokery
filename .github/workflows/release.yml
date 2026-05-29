@@ -1,12 +1,10 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-    paths:
-      - 'apps/core/**'
-      - '.github/workflows/release.yml'
-      - 'configs/Dockerfile.*'
   workflow_dispatch:
     inputs:
       bump:
@@ -28,13 +26,39 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip-release]')"
+    if: |
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event.workflow_run.conclusion == 'success' && !contains(github.event.workflow_run.head_commit.message, '[skip-release]'))
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - name: Check if core files changed
+        if: github.event_name == 'workflow_run'
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '^(apps/core/|configs/Dockerfile)' || true)
+          if [ -z "$CHANGED" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip if no core changes
+        if: github.event_name == 'workflow_run' && steps.changes.outputs.skip == 'true'
+        run: echo "No core file changes, skipping release." && exit 0
+
+      - name: Ensure initial tag exists
+        if: steps.changes.outputs.skip != 'true'
+        run: |
+          if ! git rev-parse v0.0.0 >/dev/null 2>&1; then
+            git tag v0.0.0 $(git rev-list --max-parents=0 HEAD)
+            git push origin v0.0.0
+          fi
+
       - name: Determine next version
+        if: steps.changes.outputs.skip != 'true'
         id: semver
         uses: ietf-tools/semver-action@v1
         with:
@@ -43,26 +67,24 @@ jobs:
           fallbackTag: v0.0.0
           noVersionBumpBehavior: patch
           noNewCommitBehavior: current
-          patchAll: ${{ github.event_name == 'push' }}
+          patchAll: ${{ github.event_name == 'workflow_run' }}
           additionalCommits: |
             ${{ github.event.inputs.bump == 'major' && 'feat!: manual major release' || '' }}
             ${{ github.event.inputs.bump == 'minor' && 'feat: manual minor release' || '' }}
             ${{ github.event.inputs.bump == 'patch' && 'fix: manual patch release' || '' }}
 
       - name: Skip if no new version
-        if: steps.semver.outputs.next == steps.semver.outputs.current
-        run: |
-          echo "No version change detected, skipping release."
-          exit 0
+        if: steps.changes.outputs.skip != 'true' && steps.semver.outputs.next == steps.semver.outputs.current
+        run: echo "No version change, skipping."
 
       - uses: actions/setup-go@v5
-        if: steps.semver.outputs.next != steps.semver.outputs.current
+        if: steps.changes.outputs.skip != 'true' && steps.semver.outputs.next != steps.semver.outputs.current
         with:
           go-version: "1.26"
           cache-dependency-path: apps/core/go.sum
 
       - name: Build CLI binaries
-        if: steps.semver.outputs.next != steps.semver.outputs.current
+        if: steps.changes.outputs.skip != 'true' && steps.semver.outputs.next != steps.semver.outputs.current
         working-directory: apps/core
         run: |
           VERSION=${{ steps.semver.outputs.next }}
@@ -75,7 +97,7 @@ jobs:
           GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="$LDFLAGS" -o ../../dist/smokery-windows-amd64.exe ./cmd/smokery
 
       - name: Create tag and release
-        if: steps.semver.outputs.next != steps.semver.outputs.current
+        if: steps.changes.outputs.skip != 'true' && steps.semver.outputs.next != steps.semver.outputs.current
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.semver.outputs.next }}
