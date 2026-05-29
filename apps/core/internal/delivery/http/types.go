@@ -6,6 +6,8 @@
 package http
 
 import (
+	"time"
+
 	"github.com/fanboykun/smokery/apps/core/internal/model"
 	"github.com/fanboykun/smokery/apps/core/internal/report"
 	"github.com/fanboykun/smokery/apps/core/internal/spec"
@@ -48,6 +50,10 @@ type ProjectOutput struct {
 
 type ProjectListOutput struct {
 	Body []model.Project
+}
+
+type ProjectWithStatsListOutput struct {
+	Body []model.ProjectWithStats
 }
 
 // --- Specs ---
@@ -98,12 +104,73 @@ type RunOutput struct {
 	Body model.Run
 }
 
+type RunMetaInput struct {
+	IDParam
+	Host            string `header:"Host" hidden:"true"`
+	ForwardedHost   string `header:"X-Forwarded-Host" hidden:"true"`
+	ForwardedProto  string `header:"X-Forwarded-Proto" hidden:"true"`
+	ForwardedScheme string `header:"X-Forwarded-Scheme" hidden:"true"`
+}
+
+type RunMeta struct {
+	ID                     string     `json:"id"`
+	ProjectID              string     `json:"project_id"`
+	PlanID                 *string    `json:"plan_id,omitempty"`
+	Status                 string     `json:"status"`
+	CreatedAt              time.Time  `json:"created_at"`
+	StartedAt              *time.Time `json:"started_at,omitempty"`
+	FinishedAt             *time.Time `json:"finished_at,omitempty"`
+	WebSocketURL           string     `json:"websocket_url"`
+	FallbackPollIntervalMs int        `json:"fallback_poll_interval_ms"`
+	ExpiresAt              time.Time  `json:"expires_at"`
+}
+
+type RunMetaOutput struct {
+	Body RunMeta
+}
+
 type RunListOutput struct {
 	Body []model.Run
 }
 
 type RunResultOutput struct {
 	Body model.StoredRunResult
+}
+
+type RunResultDetailsOutput struct {
+	Body model.RunResult
+}
+
+// --- Plan preview ---
+
+type Diagnostic struct {
+	Code       string `json:"code"`
+	Severity   string `json:"severity"`
+	Message    string `json:"message"`
+	EntityID   string `json:"entity_id,omitempty"`
+	EntityType string `json:"entity_type,omitempty"`
+	Location   string `json:"location,omitempty"`
+}
+
+type DiagnosticSummary struct {
+	TotalErrors   int  `json:"total_errors"`
+	TotalWarnings int  `json:"total_warnings"`
+	IsCompilable  bool `json:"is_compilable"`
+}
+
+type Diagnostics struct {
+	Errors   []Diagnostic      `json:"errors,omitempty"`
+	Warnings []Diagnostic      `json:"warnings,omitempty"`
+	Summary  DiagnosticSummary `json:"summary"`
+}
+
+type PlanPreviewResponse struct {
+	Plan        *model.SmokePlan `json:"plan,omitempty"`
+	Diagnostics Diagnostics      `json:"diagnostics"`
+}
+
+type PlanPreviewOutput struct {
+	Body PlanPreviewResponse
 }
 
 // --- Reports ---
