@@ -49,14 +49,6 @@ jobs:
         if: github.event_name == 'workflow_run' && steps.changes.outputs.skip == 'true'
         run: echo "No core file changes, skipping release." && exit 0
 
-      - name: Ensure initial tag exists
-        if: steps.changes.outputs.skip != 'true'
-        run: |
-          if ! git rev-parse v0.0.0 >/dev/null 2>&1; then
-            git tag v0.0.0 $(git rev-list --max-parents=0 HEAD)
-            git push origin v0.0.0
-          fi
-
       - name: Determine next version
         if: steps.changes.outputs.skip != 'true'
         id: semver
