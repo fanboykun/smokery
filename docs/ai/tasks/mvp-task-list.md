@@ -255,27 +255,27 @@ Prerequisites:
 - In dev mode, frontend runs separately (`bun dev`); no embedding.
 - Production: `make build-prod` builds FE → copies to `internal/frontend/dist/` → builds Go with embed tag.
 
-- [ ] **C.3.1** Operation explorer / override UI (`/projects/[id]/operations`).
-- [ ] **C.3.2** Environment config pages (`/projects/[id]/environments`).
-- [ ] **C.3.3** Auth profile config pages (under environments).
-- [ ] **C.3.4** Flow builder UI (`/projects/[id]/flows/[fid]`).
-- [ ] **C.3.5** List suite configurator UI (`/projects/[id]/suites/[sid]`).
-- [ ] **C.3.6** Plan preview page showing compiler errors/warnings + generated cases (`/projects/[id]/plan`).
-- [ ] **C.3.7** TailwindCSS + shadcn-svelte component library setup.
-- [ ] **C.3.8** Mermaid rendering on the run detail page (currently shows raw text).
-- [ ] **C.3.9** LayerChart-based latency / pass-rate trends on the runs list page.
-- [ ] **C.7.1** `make generate` should restart `air` after spec regeneration (or document the workflow).
-- [ ] **C.7.2** Pre-commit hook to regenerate FE types when API changes.
-- [ ] **C.7.3** Vitest setup for the SvelteKit app.
-- [ ] **C.7.4** Add a few component tests for critical UI paths.
+- [x] **C.3.1** Operation explorer / override UI (`/projects/[id]/operations`).
+- [x] **C.3.2** Environment config pages (`/projects/[id]/environments`).
+- [x] **C.3.3** Auth profile config pages (under environments).
+- [x] **C.3.4** Flow builder UI (`/projects/[id]/flows/[fid]`).
+- [x] **C.3.5** List suite configurator UI (`/projects/[id]/suites/[sid]`).
+- [x] **C.3.6** Plan preview page showing compiler errors/warnings + generated cases (`/projects/[id]/plan`).
+- [x] **C.3.7** TailwindCSS + shadcn-svelte component library setup.
+- [x] **C.3.8** Mermaid rendering on the run detail page (currently shows raw text).
+- [x] **C.3.9** LayerChart-based latency / pass-rate trends on the runs list page.
+- [x] **C.7.1** `make generate` should restart `air` after spec regeneration (or document the workflow).
+- [x] **C.7.2** Pre-commit hook to regenerate FE types when API changes.
+- [x] **C.7.3** Vitest setup for the SvelteKit app.
+- [x] **C.7.4** Add a few component tests for critical UI paths.
 
 ### C.OPS — Operational / deployment (can be done in parallel after BE is stable)
 
-- [ ] **C.6.1** Production Dockerfile for `cmd/server`.
-- [ ] **C.6.2** Production Dockerfile for `cmd/smokery` (small static binary image).
-- [ ] **C.6.3** GitHub Actions: build + push container images on tag.
-- [ ] **C.6.4** GitHub Actions: build + publish CLI binaries for linux / macos / windows.
-- [ ] **C.6.5** Sample Kubernetes manifests under `deploy/k8s/` (server + postgres + minio).
+- [x] **C.6.1** Production Dockerfile for `cmd/server`.
+- [x] **C.6.2** Production Dockerfile for `cmd/smokery` (small static binary image).
+- [ ] ~~**C.6.3** GitHub Actions: build + push container images on tag.~~ (skipped)
+- [x] **C.6.4** GitHub Actions: build + publish CLI binaries for linux / macos / windows.
+- [ ] ~~**C.6.5** Sample Kubernetes manifests under `deploy/k8s/` (server + postgres + minio).~~ (skipped)
 
 ---
 
@@ -287,7 +287,7 @@ The MVP is "done" when:
 2. [x] **Backend hardened** — C.2.8, C.2.9, C.4.2, C.4.5, C.4.6, C.4.7, C.4.8 finished.
 3. [x] **CLI stable** — C.4.3 (CLI tests), C.5.3 (CLI docs) finished.
 4. [x] **API surface locked** — All endpoints final, error model consistent, docs updated.
-5. [ ] **Frontend integrated** — C.3.1–C.3.6 (core frontend builders) finished.
+5. [x] **Frontend integrated** — C.3.1–C.3.6 (core frontend builders) finished.
 
 C.OPS (Dockerfiles, CI, K8s) can ship post-MVP.
 

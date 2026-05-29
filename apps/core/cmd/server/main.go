@@ -5,6 +5,7 @@ import (
 	stdhttp "net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"time"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -15,13 +16,16 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/fanboykun/smokery/apps/core/internal/adapter/fs"
 	"github.com/fanboykun/smokery/apps/core/internal/adapter/inproc"
 	minioadapter "github.com/fanboykun/smokery/apps/core/internal/adapter/minio"
 	"github.com/fanboykun/smokery/apps/core/internal/adapter/postgres"
+	sqliteadapter "github.com/fanboykun/smokery/apps/core/internal/adapter/sqlite"
 	"github.com/fanboykun/smokery/apps/core/internal/app"
 	"github.com/fanboykun/smokery/apps/core/internal/config"
 	deliveryhttp "github.com/fanboykun/smokery/apps/core/internal/delivery/http"
 	"github.com/fanboykun/smokery/apps/core/internal/frontend"
+	"github.com/fanboykun/smokery/apps/core/internal/port"
 	"github.com/fanboykun/smokery/apps/core/internal/runner"
 )
 
@@ -34,35 +38,95 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to load config")
 	}
 
-	// --- Adapters ---
-	pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to connect to database")
+	// --- Adapters: DB ---
+	var (
+		projectRepo   port.ProjectRepo
+		specRepo      port.SpecRepo
+		operationRepo port.OperationRepo
+		runRepo       port.RunRepo
+		commentRepo   port.CommentRepo
+		artifactRepo  port.ArtifactRepo
+		dbPinger      func(ctx context.Context) error
+		dbCloser      func()
+	)
+
+	switch cfg.DBAdapter {
+	case "postgres":
+		pool, err := pgxpool.New(context.Background(), cfg.DatabaseURL)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to connect to postgres")
+		}
+		dbCloser = pool.Close
+		dbPinger = pool.Ping
+		projectRepo = postgres.NewProjectRepo(pool)
+		specRepo = postgres.NewSpecRepo(pool)
+		operationRepo = postgres.NewOperationRepo(pool)
+		runRepo = postgres.NewRunRepo(pool)
+		commentRepo = postgres.NewCommentRepo(pool)
+		artifactRepo = postgres.NewArtifactRepo(pool)
+		log.Info().Str("adapter", "postgres").Msg("database connected")
+
+	default: // sqlite
+		if err := os.MkdirAll(filepath.Dir(cfg.SQLitePath), 0o755); err != nil {
+			log.Fatal().Err(err).Msg("failed to create sqlite directory")
+		}
+		db, err := sqliteadapter.Open(cfg.SQLitePath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to open sqlite database")
+		}
+		dbCloser = func() { db.Close() }
+		dbPinger = db.Ping
+		projectRepo = sqliteadapter.NewProjectRepo(db)
+		specRepo = sqliteadapter.NewSpecRepo(db)
+		operationRepo = sqliteadapter.NewOperationRepo(db)
+		runRepo = sqliteadapter.NewRunRepo(db)
+		commentRepo = sqliteadapter.NewCommentRepo(db)
+		artifactRepo = sqliteadapter.NewArtifactRepo(db)
+		log.Info().Str("adapter", "sqlite").Str("path", cfg.SQLitePath).Msg("database connected")
 	}
-	defer pool.Close()
+	defer dbCloser()
 
-	projectRepo := postgres.NewProjectRepo(pool)
-	specRepo := postgres.NewSpecRepo(pool)
-	operationRepo := postgres.NewOperationRepo(pool)
-	runRepo := postgres.NewRunRepo(pool)
-	commentRepo := postgres.NewCommentRepo(pool)
-	artifactRepo := postgres.NewArtifactRepo(pool)
+	// --- Adapters: Blob storage ---
+	var (
+		blobStore  port.BlobStore
+		blobPinger func(ctx context.Context) error
+	)
 
+	switch cfg.StorageAdapter {
+	case "minio":
+		blob, err := minioadapter.New(minioadapter.Config{
+			Endpoint:  cfg.MinioEndpoint,
+			AccessKey: cfg.MinioAccessKey,
+			SecretKey: cfg.MinioSecretKey,
+			Bucket:    "smokery",
+			UseSSL:    false,
+		})
+		if err != nil {
+			log.Warn().Err(err).Msg("MinIO unavailable, artifacts will not be persisted")
+		} else {
+			blobStore = blob
+			blobPinger = blob.Ping
+			log.Info().Str("adapter", "minio").Msg("blob storage connected")
+		}
+
+	default: // fs
+		if err := os.MkdirAll(cfg.StoragePath, 0o755); err != nil {
+			log.Fatal().Err(err).Msg("failed to create storage directory")
+		}
+		blob, err := fs.New(cfg.StoragePath)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create fs blob store")
+		}
+		blobStore = blob
+		blobPinger = func(ctx context.Context) error { return nil }
+		log.Info().Str("adapter", "fs").Str("path", cfg.StoragePath).Msg("blob storage configured")
+	}
+
+	// --- Inproc services ---
 	eventBus := inproc.NewEventBus()
 	rnr := runner.New(runner.DefaultOptions())
 	worker := inproc.NewWorker(runRepo, eventBus, rnr)
-
-	// Set up blob store for artifact persistence
-	blobStore, err := minioadapter.New(minioadapter.Config{
-		Endpoint:  cfg.MinioEndpoint,
-		AccessKey: cfg.MinioAccessKey,
-		SecretKey: cfg.MinioSecretKey,
-		Bucket:    "smokery",
-		UseSSL:    false,
-	})
-	if err != nil {
-		log.Warn().Err(err).Msg("MinIO unavailable, artifacts will not be persisted")
-	} else {
+	if blobStore != nil {
 		worker.WithArtifacts(blobStore, artifactRepo)
 	}
 
@@ -90,7 +154,7 @@ func main() {
 	api := humaecho.New(e, humaConfig)
 
 	// --- Delivery ---
-	healthChecker := &serverHealthChecker{pool: pool, blob: blobStore}
+	healthChecker := &serverHealthChecker{pingDB: dbPinger, pingBlob: blobPinger}
 	deliveryhttp.RegisterHealthCheck(api, healthChecker)
 	deliveryhttp.RegisterProjects(api, projectSvc)
 	deliveryhttp.RegisterSpecs(api, specSvc)
@@ -121,7 +185,7 @@ func main() {
 			log.Fatal().Err(err).Msg("server error")
 		}
 	}()
-	log.Info().Str("port", cfg.Port).Msg("server started")
+	log.Info().Str("port", cfg.Port).Str("db", cfg.DBAdapter).Str("storage", cfg.StorageAdapter).Msg("server started")
 	log.Info().Msg("OpenAPI spec at /openapi.json")
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -130,19 +194,22 @@ func main() {
 	_ = e.Shutdown(shutdownCtx)
 }
 
-// serverHealthChecker probes PostgreSQL and MinIO connectivity.
+// serverHealthChecker probes DB and blob storage connectivity.
 type serverHealthChecker struct {
-	pool *pgxpool.Pool
-	blob *minioadapter.BlobStore
+	pingDB   func(ctx context.Context) error
+	pingBlob func(ctx context.Context) error
 }
 
 func (h *serverHealthChecker) PingDB(ctx context.Context) error {
-	return h.pool.Ping(ctx)
+	if h.pingDB == nil {
+		return nil
+	}
+	return h.pingDB(ctx)
 }
 
 func (h *serverHealthChecker) PingBlob(ctx context.Context) error {
-	if h.blob == nil {
+	if h.pingBlob == nil {
 		return nil
 	}
-	return h.blob.Ping(ctx)
+	return h.pingBlob(ctx)
 }

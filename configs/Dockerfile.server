@@ -1,0 +1,28 @@
+# Production Dockerfile for the Smokery API server.
+# Default config: SQLite + filesystem storage (zero external deps).
+#
+# Build:  docker build -f configs/Dockerfile.server -t smokery-server .
+# Run:    docker run -p 8080:8080 -v smokery-data:/app/data smokery-server
+
+FROM golang:1.26-alpine AS builder
+WORKDIR /src
+COPY apps/core/go.mod apps/core/go.sum ./
+RUN go mod download
+COPY apps/core/ .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /server ./cmd/server
+
+FROM alpine:3.21
+RUN apk add --no-cache ca-certificates
+WORKDIR /app
+COPY --from=builder /server .
+RUN mkdir -p /app/data
+
+ENV PORT=8080
+ENV DB_ADAPTER=sqlite
+ENV STORAGE_ADAPTER=fs
+ENV SQLITE_PATH=/app/data/smokery.db
+ENV STORAGE_PATH=/app/data/artifacts
+
+EXPOSE 8080
+VOLUME ["/app/data"]
+ENTRYPOINT ["./server"]
