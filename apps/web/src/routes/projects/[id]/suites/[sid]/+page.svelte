@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
+  import { createQuery } from '@tanstack/svelte-query';
+  import { api } from '$lib/api/client';
   import { createProjectConfigStore, type Suite } from '$lib/stores/project-config';
   import * as Card from '$lib/components/ui/card';
   import { Badge } from '$lib/components/ui/badge';
@@ -13,6 +15,80 @@
   const suiteId = $page.params.sid!;
   const config = createProjectConfigStore(projectId);
   const isNew = suiteId === 'new';
+
+  // Fetch specs for the project
+  const specs = createQuery(() => ({
+    queryKey: ['specs', projectId],
+    queryFn: async () => {
+      const { data, error } = await api.GET('/api/projects/{project-id}/specs', {
+        params: { path: { 'project-id': projectId } },
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+  }));
+
+  const latestSpecId = $derived(specs.data?.at(-1)?.id);
+
+  // Fetch operations from spec
+  const operations = createQuery(() => ({
+    queryKey: ['operations', latestSpecId],
+    queryFn: async () => {
+      const { data, error } = await api.GET('/api/specs/{spec-id}/operations', {
+        params: { path: { 'spec-id': latestSpecId! } },
+      });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!latestSpecId,
+  }));
+
+  // Calculate matched operations based on selector
+  const matchedOps = $derived.by(() => {
+    const ops = operations.data ?? [];
+    const matched: typeof ops = [];
+    const excluded: typeof ops = [];
+
+    for (const op of ops) {
+      // Check if excluded
+      if ((suite.selector.exclude ?? []).includes(op.operation_id)) {
+        excluded.push(op);
+        continue;
+      }
+
+      // Check if matches selector
+      let matches = true;
+
+      // Tags filter
+      if ((suite.selector.tags ?? []).length > 0) {
+        const opTags = op.tags ?? [];
+        const hasTag = (suite.selector.tags ?? []).some((tag) => opTags.includes(tag));
+        matches = matches && hasTag;
+      }
+
+      // Classifications filter
+      if ((suite.selector.classifications ?? []).length > 0) {
+        const hasClassification = (suite.selector.classifications ?? []).includes(op.classification);
+        matches = matches && hasClassification;
+      }
+
+      // Path patterns filter
+      if ((suite.selector.paths ?? []).length > 0) {
+        const pathMatch = (suite.selector.paths ?? []).some((pattern) => {
+          // Simple wildcard matching
+          const regex = new RegExp(`^${pattern.replace(/\*/g, '.*')}$`);
+          return regex.test(op.path);
+        });
+        matches = matches && pathMatch;
+      }
+
+      if (matches) {
+        matched.push(op);
+      }
+    }
+
+    return { matched, excluded };
+  });
 
   const defaultStrategy = { default_list: true, pagination: true, search_from_response: false, enum_filters: false, empty_result_policy: 'allow', max_cases_per_op: 0 };
 
@@ -169,8 +245,8 @@
       </Card.Root>
     </div>
 
-    <!-- Strategy -->
-    <div>
+    <!-- Right panel: Strategy + Preview -->
+    <div class="space-y-4">
       <Card.Root>
         <Card.Header><Card.Title class="text-base">Generation Strategy</Card.Title><Card.Description>Control what test cases are generated for matched operations.</Card.Description></Card.Header>
         <Card.Content class="space-y-4">
@@ -206,6 +282,67 @@
             <Label>Max cases per operation</Label>
             <Input type="number" bind:value={suite.strategy.max_cases_per_op} min="0" placeholder="0 = unlimited" />
           </div>
+        </Card.Content>
+      </Card.Root>
+
+      <!-- Live Preview -->
+      <Card.Root>
+        <Card.Header><Card.Title class="text-base">Live Preview</Card.Title></Card.Header>
+        <Card.Content class="space-y-3">
+          {#if operations.isPending}
+            <p class="text-xs text-muted-foreground">Loading operations…</p>
+          {:else if operations.isError}
+            <p class="text-xs text-destructive">Failed to load operations</p>
+          {:else}
+            <!-- Matched count -->
+            <div class="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+              <p class="text-sm font-semibold text-emerald-400">{matchedOps.matched.length} operations matched</p>
+              <p class="text-xs text-muted-foreground">Will generate test cases from these</p>
+            </div>
+
+            <!-- Matched operations list -->
+            {#if matchedOps.matched.length > 0}
+              <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Included</p>
+                <div class="space-y-1 max-h-[200px] overflow-y-auto">
+                  {#each matchedOps.matched as op (op.id)}
+                    <div class="flex items-center gap-2 rounded-sm bg-muted/50 p-2 text-xs">
+                      <Badge class="bg-blue-500/20 text-blue-300 font-mono text-xs shrink-0">
+                        {op.method.toUpperCase()}
+                      </Badge>
+                      <span class="flex-1 truncate font-mono">{op.operation_id}</span>
+                      {#if op.is_destructive}
+                        <span class="text-red-400 text-xs shrink-0">destr</span>
+                      {/if}
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+
+            <!-- Excluded operations -->
+            {#if matchedOps.excluded.length > 0}
+              <div class="space-y-2">
+                <p class="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Excluded</p>
+                <div class="space-y-1 max-h-[120px] overflow-y-auto">
+                  {#each matchedOps.excluded as op (op.id)}
+                    <div class="flex items-center gap-2 rounded-sm bg-red-500/5 p-2 text-xs">
+                      <Badge class="bg-red-500/20 text-red-300 font-mono text-xs shrink-0">
+                        {op.method.toUpperCase()}
+                      </Badge>
+                      <span class="flex-1 truncate font-mono">{op.operation_id}</span>
+                      <span class="text-red-400 text-xs shrink-0">excluded</span>
+                    </div>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+
+            <!-- Empty state -->
+            {#if matchedOps.matched.length === 0 && matchedOps.excluded.length === 0}
+              <p class="text-xs text-muted-foreground">No operations match your selector. Adjust filters above.</p>
+            {/if}
+          {/if}
         </Card.Content>
       </Card.Root>
     </div>
