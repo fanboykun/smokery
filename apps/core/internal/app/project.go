@@ -11,10 +11,12 @@ import (
 
 type ProjectService struct {
 	projects port.ProjectRepo
+	specs    port.SpecRepo
+	runs     port.RunRepo
 }
 
-func NewProjectService(p port.ProjectRepo) *ProjectService {
-	return &ProjectService{projects: p}
+func NewProjectService(p port.ProjectRepo, s port.SpecRepo, r port.RunRepo) *ProjectService {
+	return &ProjectService{projects: p, specs: s, runs: r}
 }
 
 func (s *ProjectService) Create(ctx context.Context, name, description string) (*model.Project, error) {
@@ -27,6 +29,74 @@ func (s *ProjectService) Get(ctx context.Context, id uuid.UUID) (*model.Project,
 
 func (s *ProjectService) List(ctx context.Context) ([]model.Project, error) {
 	return s.projects.List(ctx)
+}
+
+func (s *ProjectService) ListWithStats(ctx context.Context) ([]model.ProjectWithStats, error) {
+	projects, err := s.projects.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]model.ProjectWithStats, 0, len(projects))
+	for _, project := range projects {
+		specCount := 0
+		if s.specs != nil {
+			specs, err := s.specs.ListByProject(ctx, project.ID)
+			if err != nil {
+				return nil, err
+			}
+			specCount = len(specs)
+		}
+
+		stats := model.ProjectHealthStats{}
+		var lastRun *model.LastRunInfo
+		if s.runs != nil {
+			runs, err := s.runs.ListByProject(ctx, project.ID)
+			if err != nil {
+				return nil, err
+			}
+
+			stats.TotalRuns = len(runs)
+			for _, run := range runs {
+				switch run.Status {
+				case "passed", "completed":
+					stats.PassedRuns++
+				case "failed", "error":
+					stats.FailedRuns++
+				}
+
+				if lastRun == nil || run.CreatedAt.After(lastRun.CreatedAt) {
+					duration := int64(0)
+					if run.StartedAt != nil && run.FinishedAt != nil {
+						duration = run.FinishedAt.Sub(*run.StartedAt).Milliseconds()
+					}
+					lastRun = &model.LastRunInfo{
+						ID:        run.ID,
+						Status:    run.Status,
+						CreatedAt: run.CreatedAt,
+						Duration:  duration,
+					}
+				}
+			}
+		}
+
+		if stats.TotalRuns > 0 {
+			stats.HealthPercentage = float64(stats.PassedRuns) / float64(stats.TotalRuns) * 100
+		}
+
+		out = append(out, model.ProjectWithStats{
+			ID:          project.ID,
+			Name:        project.Name,
+			Description: project.Description,
+			CreatedAt:   project.CreatedAt,
+			UpdatedAt:   project.UpdatedAt,
+			SpecCount:   specCount,
+			LastRun:     lastRun,
+			Stats:       stats,
+		})
+	}
+
+	return out, nil
 }
 
 func (s *ProjectService) Update(ctx context.Context, id uuid.UUID, name, description string) (*model.Project, error) {
