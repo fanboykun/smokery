@@ -73,12 +73,49 @@
   }));
 
   onMount(() => {
-    const ws = new WebSocket(`ws://localhost:8080/ws/runs/${runId}`);
-    ws.onmessage = (e) => {
-      const event: RunEvent = JSON.parse(e.data);
-      events = [...events, event];
+    // WebSocket connection with fallback to polling
+    let ws: WebSocket | null = null;
+    let wsConnected = false;
+
+    function connectWebSocket() {
+      if (!run.data?.websocket_url) return; // Wait for websocket_url from API
+
+      try {
+        ws = new WebSocket(run.data.websocket_url);
+        ws.onopen = () => {
+          wsConnected = true;
+          console.log('[v0] WebSocket connected');
+        };
+        ws.onmessage = (e) => {
+          const event: RunEvent = JSON.parse(e.data);
+          events = [...events, event];
+        };
+        ws.onerror = () => {
+          wsConnected = false;
+          console.log('[v0] WebSocket error, falling back to polling');
+        };
+        ws.onclose = () => {
+          wsConnected = false;
+        };
+      } catch (err) {
+        console.log('[v0] WebSocket failed:', err);
+        wsConnected = false;
+      }
+    }
+
+    // Try to connect when run data becomes available
+    const checkConnection = () => {
+      if (!wsConnected && run.data?.websocket_url) {
+        connectWebSocket();
+      }
     };
-    return () => ws.close();
+
+    const interval = setInterval(checkConnection, 1000);
+
+    return () => {
+      clearInterval(interval);
+      ws?.close();
+    };
   });
 
   function statusVariant(status: string) {
