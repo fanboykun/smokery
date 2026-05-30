@@ -3,6 +3,9 @@
   import * as Tabs from '$lib/components/ui/tabs';
   import { Button } from '$lib/components/ui/button';
   import { ArrowLeft } from '@lucide/svelte';
+  import type { Snippet } from 'svelte';
+
+  let { children }: { children: Snippet } = $props();
 
   const runId = $page.params.runId!;
 
@@ -34,25 +37,33 @@
       <!-- Tabs -->
       <Tabs.Root value={activeTab}>
         <Tabs.List class="w-full">
-          <Tabs.Trigger value="contract" asChild>
-            <a href="/runs/{runId}/report/contract" class="cursor-pointer">
-              Contract Compliance
-            </a>
+          <Tabs.Trigger value="contract">
+            {#snippet child({ props })}
+              <a {...props} href="/runs/{runId}/report/contract" class="cursor-pointer">
+                Contract Compliance
+              </a>
+            {/snippet}
           </Tabs.Trigger>
-          <Tabs.Trigger value="analyst" asChild>
-            <a href="/runs/{runId}/report/analyst" class="cursor-pointer">
-              Analyst View
-            </a>
+          <Tabs.Trigger value="analyst">
+            {#snippet child({ props })}
+              <a {...props} href="/runs/{runId}/report/analyst" class="cursor-pointer">
+                Analyst View
+              </a>
+            {/snippet}
           </Tabs.Trigger>
-          <Tabs.Trigger value="qa" asChild>
-            <a href="/runs/{runId}/report/qa" class="cursor-pointer">
-              QA Summary
-            </a>
+          <Tabs.Trigger value="qa">
+            {#snippet child({ props })}
+              <a {...props} href="/runs/{runId}/report/qa" class="cursor-pointer">
+                QA Summary
+              </a>
+            {/snippet}
           </Tabs.Trigger>
-          <Tabs.Trigger value="correlation" asChild>
-            <a href="/runs/{runId}/report/correlation" class="cursor-pointer">
-              Correlation
-            </a>
+          <Tabs.Trigger value="correlation">
+            {#snippet child({ props })}
+              <a {...props} href="/runs/{runId}/report/correlation" class="cursor-pointer">
+                Correlation
+              </a>
+            {/snippet}
           </Tabs.Trigger>
         </Tabs.List>
       </Tabs.Root>
@@ -60,5 +71,5 @@
   </div>
 
   <!-- Content -->
-  <slot />
+  {@render children()}
 </main>

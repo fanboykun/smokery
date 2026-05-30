@@ -141,7 +141,7 @@
                         <ChevronRight class="size-4" />
                       {/if}
                     </div>
-                    <Badge class={methodColor(op.method)} variant="secondary" class="font-mono font-bold text-xs shrink-0">
+                    <Badge class={`${methodColor(op.method)} font-mono font-bold text-xs shrink-0`} variant="secondary">
                       {op.method.toUpperCase()}
                     </Badge>
                     <span class="font-mono text-sm flex-1 truncate">{op.operation_id}</span>

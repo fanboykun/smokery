@@ -1,13 +1,16 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   interface Props {
     title?: string;
     subtitle?: string;
     description?: string;
-    actions?: any;
+    actions?: Snippet;
+    children?: Snippet;
     class?: string;
   }
 
-  let { title, subtitle, description, actions, class: cls = '' } = $props();
+  let { title, subtitle, description, actions, children, class: cls = '' }: Props = $props();
 </script>
 
 <div class={`flex flex-col gap-6 ${cls}`}>
@@ -33,6 +36,8 @@
   {/if}
 
   <div class="flex-1">
-    <slot />
+    {#if children}
+      {@render children()}
+    {/if}
   </div>
 </div>

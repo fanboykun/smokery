@@ -52,17 +52,19 @@
 </script>
 
 <main class="min-h-screen space-y-8 bg-background px-6 py-8">
+  {#snippet actionsSnippet()}
+    <form class="flex gap-2" onsubmit={(e) => { e.preventDefault(); if (name.trim()) createProject.mutate(name.trim()); }}>
+      <Input bind:value={name} placeholder="Project name" class="w-48" />
+      <Button type="submit" disabled={createProject.isPending}>+ New Project</Button>
+    </form>
+  {/snippet}
+
   <PageLayout 
     title="Projects"
     subtitle="Spec-driven smoke testing"
     description="Create and manage OpenAPI smoke tests. Track health across environments."
     class="mx-auto max-w-7xl"
-    actions={() => {
-      <form class="flex gap-2" onsubmit={(e) => { e.preventDefault(); if (name.trim()) createProject.mutate(name.trim()); }}>
-        <Input bind:value={name} placeholder="Project name" class="w-48" />
-        <Button type="submit" disabled={createProject.isPending}>+ New Project</Button>
-      </form>
-    }}
+    actions={actionsSnippet}
   >
 
     {#if projects.isLoading}

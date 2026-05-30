@@ -31,8 +31,9 @@
     queryFn: async () => {
       previewLoading = true;
       try {
-        const { data, error } = await api.POST('/api/projects/{id}/plan/preview', {
-          params: { path: { id: projectId } },
+        const { data, error } = await api.POST('/api/projects/{project-id}/plan/preview', {
+          params: { path: { 'project-id': projectId } },
+          body: $config as any,
         });
         if (error) {
           previewError = (error as any).detail ?? 'Compilation failed';
@@ -83,7 +84,7 @@
         </div>
 
         <!-- Tabs -->
-        <Tabs.Root value={activeTab} onvaluechange={(v) => (activeTab = v)}>
+        <Tabs.Root value={activeTab} onValueChange={(v: string) => (activeTab = v)}>
           <Tabs.List class="grid w-full grid-cols-3">
             <Tabs.Trigger value="flows">Flows</Tabs.Trigger>
             <Tabs.Trigger value="suites">Suites</Tabs.Trigger>
@@ -123,7 +124,7 @@
                     class="block rounded-lg border border-border p-2 transition-colors hover:bg-muted"
                   >
                     <p class="text-sm font-medium">{suite.name}</p>
-                    <Badge variant="secondary" class="text-xs">{suite.operations.length} ops</Badge>
+                    <Badge variant="secondary" class="text-xs">{suite.selector.tags?.length ?? 0} tags</Badge>
                   </a>
                 {/each}
               </div>
@@ -176,11 +177,11 @@
             <div class="space-y-2">
               <div class="flex items-center justify-between text-sm">
                 <span class="text-muted-foreground">Test Cases</span>
-                <span class="font-semibold">{plan.data.test_cases?.length ?? 0}</span>
+                <span class="font-semibold">{plan.data.plan?.suite_plans?.reduce((sum: number, sp: any) => sum + (sp.cases?.length ?? 0), 0) ?? 0}</span>
               </div>
               <div class="flex items-center justify-between text-sm">
-                <span class="text-muted-foreground">Total Steps</span>
-                <span class="font-semibold">{plan.data.test_cases?.reduce((sum, tc) => sum + (tc.steps?.length ?? 0), 0) ?? 0}</span>
+                <span class="text-muted-foreground">Flow Plans</span>
+                <span class="font-semibold">{plan.data.plan?.flow_plans?.length ?? 0}</span>
               </div>
             </div>
           </div>

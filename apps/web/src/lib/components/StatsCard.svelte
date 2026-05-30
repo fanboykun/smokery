@@ -33,7 +33,7 @@
           <div class="flex items-baseline gap-2">
             <span class="text-2xl font-bold">{stat.value}</span>
             {#if stat.color}
-              <span class={`inline-block size-2 rounded-full ${colorMap[stat.color]}`} />
+              <span class={`inline-block size-2 rounded-full ${colorMap[stat.color as keyof typeof colorMap]}`} />
             {/if}
           </div>
         </div>

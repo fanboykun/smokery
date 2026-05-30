@@ -11,7 +11,7 @@
     class?: string;
   }
 
-  let { status, label, size = 'md', class: cls = '' } = $props();
+  let { status, label, size = 'md', class: cls = '' }: Props = $props();
 
   const statusConfig: Record<Status, { variant: any; icon: any; color: string; text: string }> = {
     passed: {
@@ -46,10 +46,10 @@
     },
   };
 
-  const config = statusConfig[status];
-  const Icon = config.icon;
+  const config = $derived(statusConfig[status]);
+  const Icon = $derived(config.icon);
 
-  const sizeMap = {
+  const sizeMap: Record<string, string> = {
     sm: 'size-3',
     md: 'size-4',
     lg: 'size-5',

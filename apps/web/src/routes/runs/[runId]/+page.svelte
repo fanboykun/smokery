@@ -80,10 +80,10 @@
     let wsConnected = false;
 
     function connectWebSocket() {
-      if (!run.data?.websocket_url) return; // Wait for websocket_url from API
+      if (!(run.data as any)?.websocket_url) return; // Wait for websocket_url from API
 
       try {
-        ws = new WebSocket(run.data.websocket_url);
+        ws = new WebSocket((run.data as any).websocket_url);
         ws.onopen = () => {
           wsConnected = true;
           console.log('[v0] WebSocket connected');
@@ -107,7 +107,7 @@
 
     // Try to connect when run data becomes available
     const checkConnection = () => {
-      if (!wsConnected && run.data?.websocket_url) {
+      if (!wsConnected && (run.data as any)?.websocket_url) {
         connectWebSocket();
       }
     };
@@ -213,7 +213,7 @@
   {/if}
 
   <!-- Results tabs -->
-  <Tabs.Root value={activeTab} onvaluechange={(v) => (activeTab = v)} class="mb-4">
+  <Tabs.Root value={activeTab} onValueChange={(v: string) => (activeTab = v)} class="mb-4">
     <Tabs.List class="grid w-full grid-cols-4">
       <Tabs.Trigger value="timeline">Timeline</Tabs.Trigger>
       <Tabs.Trigger value="debug">Debug</Tabs.Trigger>

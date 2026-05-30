@@ -198,6 +198,7 @@
             <div class="space-y-1"><Label>Name</Label><Input bind:value={editingStep.name} placeholder="Create user" /></div>
             <OperationPicker
               projectId={projectId}
+              specId={undefined}
               bind:value={editingStep.operation_id}
               onchange={(opId) => {
                 editingStep.operation_id = opId;
