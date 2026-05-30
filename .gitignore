@@ -10,3 +10,5 @@ tmp/
 vendor/
 coverage/
 .DS_Store
+data/*
+*.db

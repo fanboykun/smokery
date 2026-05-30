@@ -131,7 +131,7 @@ func main() {
 	}
 
 	// --- App services ---
-	projectSvc := app.NewProjectService(projectRepo)
+	projectSvc := app.NewProjectService(projectRepo, specRepo, runRepo)
 	specSvc := app.NewSpecService(specRepo, operationRepo)
 	operationSvc := app.NewOperationService(operationRepo)
 	runSvc := app.NewRunService(runRepo, worker)
@@ -145,11 +145,11 @@ func main() {
 	e.HideBanner = true
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
-		LogURI:      true,
-		LogStatus:   true,
-		LogMethod:   true,
-		LogLatency:  true,
-		LogError:    true,
+		LogURI:     true,
+		LogStatus:  true,
+		LogMethod:  true,
+		LogLatency: true,
+		LogError:   true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
 			evt := log.Info().Str("method", v.Method).Str("uri", v.URI).Int("status", v.Status).Dur("latency", v.Latency)
 			if v.Error != nil {

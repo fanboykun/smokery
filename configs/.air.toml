@@ -1,15 +1,26 @@
-root = "../../apps/core"
-tmp_dir = "../../tmp"
+#:schema https://json.schemastore.org/any.json
+
+root = "."
+tmp_dir = "tmp"
+env_files = [".env", "apps/core/.env"]
 
 [build]
-  cmd = "go build -o ../../tmp/server ./cmd/server"
-  entrypoint = "../../tmp/server"
+  cmd = "go -C apps/core build -o ../../tmp/server ./cmd/server"
+  entrypoint = ["./tmp/server"]
   include_ext = ["go"]
-  exclude_dir = ["tmp", "vendor"]
+  include_dir = ["apps/core"]
+  exclude_dir = ["tmp", "vendor", "apps/web/node_modules", "node_modules"]
+  exclude_regex = ["_test\\.go"]
+  exclude_unchanged = true
   delay = 1000
+  stop_on_error = true
 
 [log]
   time = false
+
+[screen]
+  clear_on_rebuild = true
+  keep_scroll = true
 
 [misc]
   clean_on_exit = true

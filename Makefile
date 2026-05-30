@@ -1,5 +1,10 @@
 .PHONY: dev build test check generate migrate up down clean build-cli run-cli install-cli build-prod
 
+export PATH := $(HOME)/go/bin:$(PATH)
+
+AIR ?= air
+AIR_CONFIG ?= $(firstword $(wildcard configs/.air.toml .air.toml configs/air.toml air.toml))
+
 # --- Build ---
 build: build-api build-cli
 
@@ -27,8 +32,7 @@ install-cli: build-cli
 
 # --- Dev ---
 dev:
-	@mkdir -p tmp
-	cd configs && air -c .air.toml
+	 @$(shell go env GOPATH)/bin/air -c configs/.air.toml
 
 # --- Generate ---
 # Workflow with air (hot-reload):

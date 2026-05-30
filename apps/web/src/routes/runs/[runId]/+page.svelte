@@ -5,6 +5,7 @@
   import { onMount } from 'svelte';
   import MermaidDiagram from '$lib/components/MermaidDiagram.svelte';
   import * as Card from '$lib/components/ui/card';
+  import * as Tabs from '$lib/components/ui/tabs';
   import { Badge } from '$lib/components/ui/badge';
   import { Button } from '$lib/components/ui/button';
 
@@ -17,6 +18,7 @@
   let events = $state<RunEvent[]>([]);
   let statusFilter = $state('all');
   let stepsExpanded = $state(true);
+  let activeTab = $state('timeline');
   const runId = $page.params.runId!;
 
   const run = createQuery(() => ({
@@ -73,12 +75,49 @@
   }));
 
   onMount(() => {
-    const ws = new WebSocket(`ws://localhost:8080/ws/runs/${runId}`);
-    ws.onmessage = (e) => {
-      const event: RunEvent = JSON.parse(e.data);
-      events = [...events, event];
+    // WebSocket connection with fallback to polling
+    let ws: WebSocket | null = null;
+    let wsConnected = false;
+
+    function connectWebSocket() {
+      if (!(run.data as any)?.websocket_url) return; // Wait for websocket_url from API
+
+      try {
+        ws = new WebSocket((run.data as any).websocket_url);
+        ws.onopen = () => {
+          wsConnected = true;
+          console.log('[v0] WebSocket connected');
+        };
+        ws.onmessage = (e) => {
+          const event: RunEvent = JSON.parse(e.data);
+          events = [...events, event];
+        };
+        ws.onerror = () => {
+          wsConnected = false;
+          console.log('[v0] WebSocket error, falling back to polling');
+        };
+        ws.onclose = () => {
+          wsConnected = false;
+        };
+      } catch (err) {
+        console.log('[v0] WebSocket failed:', err);
+        wsConnected = false;
+      }
+    }
+
+    // Try to connect when run data becomes available
+    const checkConnection = () => {
+      if (!wsConnected && (run.data as any)?.websocket_url) {
+        connectWebSocket();
+      }
     };
-    return () => ws.close();
+
+    const interval = setInterval(checkConnection, 1000);
+
+    return () => {
+      clearInterval(interval);
+      ws?.close();
+    };
   });
 
   function statusVariant(status: string) {
@@ -173,11 +212,21 @@
     </Card.Root>
   {/if}
 
-  <!-- Step Results with filter and collapse -->
-  {#if allSteps.length > 0}
-    <Card.Root class="mb-4">
-      <Card.Header class="flex-row flex-wrap items-center justify-between gap-2">
-        <Card.Title class="text-base">Step Results ({allSteps.length})</Card.Title>
+  <!-- Results tabs -->
+  <Tabs.Root value={activeTab} onValueChange={(v: string) => (activeTab = v)} class="mb-4">
+    <Tabs.List class="grid w-full grid-cols-4">
+      <Tabs.Trigger value="timeline">Timeline</Tabs.Trigger>
+      <Tabs.Trigger value="debug">Debug</Tabs.Trigger>
+      <Tabs.Trigger value="diagram">Diagram</Tabs.Trigger>
+      <Tabs.Trigger value="events">Events</Tabs.Trigger>
+    </Tabs.List>
+
+    <!-- Timeline Tab -->
+    <Tabs.Content value="timeline" class="mt-4">
+      {#if allSteps.length > 0}
+        <Card.Root class="mb-4">
+          <Card.Header class="flex-row flex-wrap items-center justify-between gap-2">
+            <Card.Title class="text-base">Step Results ({allSteps.length})</Card.Title>
         <div class="flex items-center gap-2">
           <select
             class="rounded-md border border-input bg-background px-2 py-1 text-xs"
@@ -224,13 +273,15 @@
           {/if}
         </Card.Content>
       {/if}
-    </Card.Root>
-  {/if}
+        </Card.Root>
+      {/if}
+    </Tabs.Content>
 
-  <!-- Debug Report -->
-  {#if debugReport.data}
-    <Card.Root class="mb-4">
-      <Card.Header><Card.Title class="text-base">Debug Report</Card.Title></Card.Header>
+    <!-- Debug Tab -->
+    <Tabs.Content value="debug" class="mt-4">
+      {#if debugReport.data}
+        <Card.Root class="mb-4">
+          <Card.Header><Card.Title class="text-base">Debug Report</Card.Title></Card.Header>
       <Card.Content class="space-y-3">
         <div class="flex flex-wrap gap-3 text-sm">
           <span>Status: <Badge variant={statusVariant(debugReport.data.status)}>{debugReport.data.status}</Badge></span>
@@ -259,24 +310,28 @@
             {/each}
           </div>
         {/if}
-      </Card.Content>
-    </Card.Root>
-  {/if}
+        </Card.Content>
+        </Card.Root>
+      {/if}
+    </Tabs.Content>
 
-  <!-- Mermaid Sequence Diagram -->
-  {#if mermaid.data}
-    <Card.Root class="mb-4">
-      <Card.Header><Card.Title class="text-base">Sequence Diagram</Card.Title></Card.Header>
+    <!-- Diagram Tab -->
+    <Tabs.Content value="diagram" class="mt-4">
+      {#if mermaid.data}
+        <Card.Root class="mb-4">
+          <Card.Header><Card.Title class="text-base">Sequence Diagram</Card.Title></Card.Header>
       <Card.Content class="overflow-x-auto">
         <MermaidDiagram code={mermaid.data} />
       </Card.Content>
-    </Card.Root>
-  {/if}
+        </Card.Root>
+      {/if}
+    </Tabs.Content>
 
-  <!-- Live Events -->
-  {#if events.length > 0}
-    <Card.Root>
-      <Card.Header><Card.Title class="text-base">Live Events ({events.length})</Card.Title></Card.Header>
+    <!-- Events Tab -->
+    <Tabs.Content value="events" class="mt-4">
+      {#if events.length > 0}
+        <Card.Root>
+          <Card.Header><Card.Title class="text-base">Live Events ({events.length})</Card.Title></Card.Header>
       <Card.Content class="max-h-64 space-y-1 overflow-y-auto">
         {#each events as ev, i (i)}
           <div class="flex flex-wrap gap-2 rounded-md bg-secondary/50 px-2 py-1 text-xs">
@@ -285,12 +340,14 @@
           </div>
         {/each}
       </Card.Content>
-    </Card.Root>
-  {:else if run.data?.status === 'pending' || run.data?.status === 'running'}
-    <Card.Root>
-      <Card.Content class="py-8 text-center text-sm text-muted-foreground">
-        Waiting for events…
-      </Card.Content>
-    </Card.Root>
-  {/if}
+        </Card.Root>
+      {:else if run.data?.status === 'pending' || run.data?.status === 'running'}
+        <Card.Root>
+          <Card.Content class="py-8 text-center text-sm text-muted-foreground">
+            Waiting for events…
+          </Card.Content>
+        </Card.Root>
+      {/if}
+    </Tabs.Content>
+  </Tabs.Root>
 </main>

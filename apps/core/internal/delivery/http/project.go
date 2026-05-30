@@ -19,12 +19,12 @@ func RegisterProjects(api huma.API, svc *app.ProjectService) {
 		return &ProjectOutput{Body: *p}, nil
 	})
 
-	huma.Get(api, "/api/projects", func(ctx context.Context, in *struct{}) (*ProjectListOutput, error) {
-		ps, err := svc.List(ctx)
+	huma.Get(api, "/api/projects", func(ctx context.Context, in *struct{}) (*ProjectWithStatsListOutput, error) {
+		ps, err := svc.ListWithStats(ctx)
 		if err != nil {
 			return nil, ErrInternal("projects", "failed to list projects", err)
 		}
-		return &ProjectListOutput{Body: ps}, nil
+		return &ProjectWithStatsListOutput{Body: ps}, nil
 	})
 
 	huma.Get(api, "/api/projects/{id}", func(ctx context.Context, in *IDParam) (*ProjectOutput, error) {

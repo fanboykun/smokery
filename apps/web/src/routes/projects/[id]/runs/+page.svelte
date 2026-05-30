@@ -65,6 +65,18 @@
     if (status === 'failed') return 'destructive' as const;
     return 'secondary' as const;
   }
+
+  const stats = $derived.by(() => {
+    const data = runs.data ?? [];
+    const completed = data.filter(r => r.status === 'completed').length;
+    const failed = data.filter(r => r.status === 'failed').length;
+    return {
+      total: data.length,
+      completed,
+      failed,
+      passRate: data.length > 0 ? Math.round((completed / data.length) * 100) : 0,
+    };
+  });
 </script>
 
 <main class="mx-auto max-w-5xl px-6 py-8">
@@ -82,6 +94,30 @@
       </Button>
     </div>
   </div>
+
+  <!-- Stats -->
+  {#if runs.data && runs.data.length > 0}
+    <Card.Root class="mb-6">
+      <Card.Content class="grid gap-4 py-6 sm:grid-cols-4">
+        <div class="text-center">
+          <p class="text-2xl font-bold">{stats.total}</p>
+          <p class="text-xs text-muted-foreground">Total Runs</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-bold text-emerald-400">{stats.completed}</p>
+          <p class="text-xs text-muted-foreground">Passed</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-bold text-red-400">{stats.failed}</p>
+          <p class="text-xs text-muted-foreground">Failed</p>
+        </div>
+        <div class="text-center">
+          <p class="text-2xl font-bold text-primary">{stats.passRate}%</p>
+          <p class="text-xs text-muted-foreground">Pass Rate</p>
+        </div>
+      </Card.Content>
+    </Card.Root>
+  {/if}
 
   <!-- Trend chart -->
   {#if trendData.length >= 2}
@@ -103,20 +139,31 @@
 
   <!-- Runs list -->
   {#if runs.isLoading}
-    <p class="text-muted-foreground">Loading…</p>
+    <div class="space-y-3">
+      {#each Array(3) as _}
+        <div class="h-16 animate-pulse rounded-lg border border-border bg-muted" />
+      {/each}
+    </div>
   {:else if (runs.data ?? []).length === 0}
-    <Card.Root>
+    <Card.Root class="border-dashed">
       <Card.Content class="py-12 text-center text-sm text-muted-foreground">
-        No runs yet. Start one above.
+        <p class="font-medium text-foreground">No runs yet</p>
+        <p class="mt-1">Start your first run from the Plan Preview to see results here.</p>
       </Card.Content>
     </Card.Root>
   {:else}
-    <div class="space-y-2">
+    <div class="space-y-3">
       {#each (runs.data ?? []).slice().reverse() as r (r.id)}
-        <a href="/runs/{r.id}" class="flex items-center gap-4 rounded-lg border border-border p-3 transition-colors hover:bg-secondary">
-          <Badge variant={statusVariant(r.status)}>{r.status}</Badge>
-          <span class="flex-1 font-mono text-sm">{r.id.slice(0, 8)}</span>
-          <span class="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
+        <a href="/runs/{r.id}" class="group block">
+          <Card.Root class="transition-all hover:border-primary/50 hover:shadow-md">
+            <Card.Content class="flex items-center justify-between gap-4 py-3">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <Badge variant={statusVariant(r.status)} class="shrink-0">{r.status === 'completed' ? '✓' : r.status === 'failed' ? '✕' : '○'} {r.status}</Badge>
+                <span class="font-mono text-sm truncate text-muted-foreground group-hover:text-primary">{r.id.slice(0, 8)}</span>
+              </div>
+              <span class="text-xs text-muted-foreground shrink-0">{new Date(r.created_at).toLocaleString()}</span>
+            </Card.Content>
+          </Card.Root>
         </a>
       {/each}
     </div>

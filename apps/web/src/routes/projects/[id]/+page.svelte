@@ -76,12 +76,11 @@
   }
 
   const navItems = [
-    { href: `/projects/${projectId}/operations`, label: 'Operations', desc: 'Explore & classify' },
-    { href: `/projects/${projectId}/environments`, label: 'Environments', desc: 'Configure targets' },
-    { href: `/projects/${projectId}/flows/new`, label: 'New Flow', desc: 'Build a scenario' },
-    { href: `/projects/${projectId}/suites/new`, label: 'New Suite', desc: 'Generated tests' },
-    { href: `/projects/${projectId}/plan`, label: 'Plan Preview', desc: 'Compile & run' },
-    { href: `/projects/${projectId}/runs`, label: 'Runs', desc: 'History' },
+    { href: `/projects/${projectId}/builder`, label: 'Builder', desc: 'Configure & preview', icon: 'build' },
+    { href: `/projects/${projectId}/operations`, label: 'Operations', desc: 'Classify & organize', icon: 'ops' },
+    { href: `/projects/${projectId}/environments`, label: 'Environments', desc: 'Configure targets', icon: 'env' },
+    { href: `/projects/${projectId}/plan`, label: 'Plan', desc: 'Compile & view', icon: 'plan' },
+    { href: `/projects/${projectId}/runs`, label: 'Runs', desc: 'Execution history', icon: 'runs' },
   ];
 </script>
 
@@ -97,12 +96,15 @@
     <Button onclick={() => { importOpen = true; importSuccess = ''; importError = ''; }}>Import Spec</Button>
   </div>
 
-  <!-- Navigation grid -->
-  <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+  <!-- Navigation grid - Primary actions -->
+  <div class="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
     {#each navItems as item (item.href)}
-      <a href={item.href} class="rounded-lg border border-border p-3 transition-colors hover:bg-secondary">
-        <p class="text-sm font-medium">{item.label}</p>
-        <p class="text-xs text-muted-foreground">{item.desc}</p>
+      <a href={item.href} class="group relative overflow-hidden rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-md">
+        <div class="relative z-10">
+          <p class="text-sm font-semibold text-foreground">{item.label}</p>
+          <p class="mt-1 text-xs text-muted-foreground">{item.desc}</p>
+        </div>
+        <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
       </a>
     {/each}
   </div>

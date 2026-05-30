@@ -7,7 +7,10 @@
   import { Input } from '$lib/components/ui/input';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as AlertDialog from '$lib/components/ui/alert-dialog';
-  import { EllipsisVertical } from '@lucide/svelte';
+  import { EllipsisVertical, TrendingUp, Play, Settings } from '@lucide/svelte';
+  import PageLayout from '$lib/components/PageLayout.svelte';
+  import StatsCard from '$lib/components/StatsCard.svelte';
+  import StatusBadge from '$lib/components/StatusBadge.svelte';
 
   const queryClient = useQueryClient();
   let name = $state('');
@@ -48,76 +51,101 @@
   }
 </script>
 
-<main class="mx-auto max-w-5xl px-6 py-8">
-  <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
-    <div>
-      <p class="text-xs font-bold uppercase tracking-widest text-primary">Spec-driven smoke testing</p>
-      <h1 class="text-3xl font-bold">Projects</h1>
-      <p class="text-sm text-muted-foreground">Manage OpenAPI specs, configure smoke tests, and track run health.</p>
-    </div>
-    <form
-      class="flex gap-2"
-      onsubmit={(e) => { e.preventDefault(); if (name.trim()) createProject.mutate(name.trim()); }}
-    >
+<main class="min-h-screen space-y-8 bg-background px-6 py-8">
+  {#snippet actionsSnippet()}
+    <form class="flex gap-2" onsubmit={(e) => { e.preventDefault(); if (name.trim()) createProject.mutate(name.trim()); }}>
       <Input bind:value={name} placeholder="Project name" class="w-48" />
-      <Button type="submit" disabled={createProject.isPending}>+ New</Button>
+      <Button type="submit" disabled={createProject.isPending}>+ New Project</Button>
     </form>
-  </div>
+  {/snippet}
 
-  {#if projects.isLoading}
-    <p class="text-muted-foreground">Loading…</p>
-  {:else if projects.isError}
-    <Card.Root><Card.Content class="py-4 text-sm text-muted-foreground">API unavailable. Start the server with <code>make dev</code>.</Card.Content></Card.Root>
-  {:else if projects.data && projects.data.length > 0}
-    <div class="space-y-3">
-      {#each projects.data as project (project.id)}
-        <a href="/projects/{project.id}" class="block">
-          <Card.Root class="transition-colors hover:border-primary/50">
-            <Card.Header class="flex-row items-center justify-between pb-2">
-              <div>
-                <Card.Title class="text-lg">{project.name}</Card.Title>
-                {#if project.description}
-                  <Card.Description>{project.description}</Card.Description>
-                {/if}
+  <PageLayout 
+    title="Projects"
+    subtitle="Spec-driven smoke testing"
+    description="Create and manage OpenAPI smoke tests. Track health across environments."
+    class="mx-auto max-w-7xl"
+    actions={actionsSnippet}
+  >
+
+    {#if projects.isLoading}
+      <div class="space-y-4">
+        {#each Array(3) as _}
+          <Card.Root class="animate-pulse"><Card.Content class="h-24" /></Card.Root>
+        {/each}
+      </div>
+    {:else if projects.isError}
+      <Card.Root class="border-destructive/50 bg-destructive/5">
+        <Card.Content class="py-6 text-sm text-muted-foreground">
+          <p class="font-semibold text-destructive">API unavailable</p>
+          <p class="mt-1">Start the server with <code class="rounded bg-muted px-1.5 py-0.5 text-xs">make dev</code>.</p>
+        </Card.Content>
+      </Card.Root>
+    {:else if projects.data && projects.data.length > 0}
+      <div class="grid gap-4 lg:grid-cols-2">
+        {#each projects.data as project (project.id)}
+          <Card.Root class="group relative overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg">
+            <Card.Header class="pb-3">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <a href="/projects/{project.id}" class="hover:underline">
+                    <Card.Title class="text-lg">{project.name}</Card.Title>
+                  </a>
+                  {#if project.description}
+                    <Card.Description class="mt-1">{project.description}</Card.Description>
+                  {/if}
+                </div>
+                <div onclick={(e) => e.preventDefault()} role="none" class="opacity-0 transition-opacity group-hover:opacity-100">
+                  <DropdownMenu.Root>
+                    <DropdownMenu.Trigger>
+                      {#snippet child({ props })}
+                        <button {...props} class="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted" aria-label="More actions">
+                          <EllipsisVertical class="size-4" />
+                        </button>
+                      {/snippet}
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content align="end">
+                      <DropdownMenu.Item
+                        class="text-destructive"
+                        onclick={() => { deleteTarget = { id: project.id, name: project.name }; confirmText = ''; alertOpen = true; }}
+                      >
+                        Delete project
+                      </DropdownMenu.Item>
+                    </DropdownMenu.Content>
+                  </DropdownMenu.Root>
+                </div>
               </div>
-              <Badge variant="secondary">{new Date(project.created_at).toLocaleDateString()}</Badge>
             </Card.Header>
-            <Card.Footer class="gap-2 pt-0">
-              <Button variant="outline" size="sm" href="/projects/{project.id}/operations">Operations</Button>
-              <Button variant="outline" size="sm" href="/projects/{project.id}/environments">Config</Button>
-              <Button variant="outline" size="sm" href="/projects/{project.id}/plan">Plan</Button>
-              <Button size="sm" href="/projects/{project.id}/runs">Runs</Button>
-              <div class="ml-auto" onclick={(e) => e.preventDefault()} role="none">
-                <DropdownMenu.Root>
-                  <DropdownMenu.Trigger>
-                    {#snippet child({ props })}
-                      <button {...props} class="inline-flex size-7 items-center justify-center rounded-md hover:bg-muted" aria-label="More actions">
-                        <EllipsisVertical class="size-4" />
-                      </button>
-                    {/snippet}
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Content align="end">
-                    <DropdownMenu.Item
-                      class="text-destructive"
-                      onclick={() => { deleteTarget = { id: project.id, name: project.name }; confirmText = ''; alertOpen = true; }}
-                    >
-                      Delete project
-                    </DropdownMenu.Item>
-                  </DropdownMenu.Content>
-                </DropdownMenu.Root>
+            <Card.Content class="space-y-3 pb-4">
+              <div class="flex gap-2">
+                <Badge variant="outline" class="text-xs">{new Date(project.created_at).toLocaleDateString()}</Badge>
               </div>
+            </Card.Content>
+            <Card.Footer class="gap-2 border-t bg-muted/20 p-3">
+              <Button variant="outline" size="sm" href="/projects/{project.id}/builder" class="flex-1">
+                <Play class="size-3" />
+                Builder
+              </Button>
+              <Button variant="ghost" size="sm" href="/projects/{project.id}/runs" class="flex-1">
+                <TrendingUp class="size-3" />
+                Runs
+              </Button>
+              <Button variant="ghost" size="sm" href="/projects/{project.id}/environments" class="flex-1">
+                <Settings class="size-3" />
+                Config
+              </Button>
             </Card.Footer>
           </Card.Root>
-        </a>
-      {/each}
-    </div>
-  {:else}
-    <Card.Root>
-      <Card.Content class="py-12 text-center text-sm text-muted-foreground">
-        No projects yet. Create one above to get started.
-      </Card.Content>
-    </Card.Root>
-  {/if}
+        {/each}
+      </div>
+    {:else}
+      <Card.Root class="border-dashed">
+        <Card.Content class="py-12 text-center">
+          <p class="text-sm font-medium text-foreground">No projects yet</p>
+          <p class="mt-1 text-sm text-muted-foreground">Create your first project above to get started with smoke testing.</p>
+        </Card.Content>
+      </Card.Root>
+    {/if}
+  </PageLayout>
 </main>
 
 <!-- Delete confirmation -->
