@@ -73,6 +73,10 @@ type OperationListOutput struct {
 	Body []model.Operation
 }
 
+type CanvasOperationListOutput struct {
+	Body []spec.OperationInfo
+}
+
 type OperationOutput struct {
 	Body model.Operation
 }

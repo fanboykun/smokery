@@ -62,10 +62,7 @@
     queryFn: async () => {
       const { data, error } = await api.GET('/api/runs/{id}/result', { params: { path: { id: runId } } });
       if (error) throw error;
-      const raw = data!.result as string;
-      try { return JSON.parse(raw); } catch {}
-      try { return JSON.parse(atob(raw)); } catch {}
-      return null;
+      return data!;
     },
     enabled: run.data?.status === 'completed' || run.data?.status === 'failed',
   }));

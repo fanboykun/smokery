@@ -135,7 +135,7 @@ func main() {
 	// --- App services ---
 	projectSvc := app.NewProjectService(projectRepo, specRepo, runRepo)
 	specSvc := app.NewSpecService(specRepo, operationRepo)
-	operationSvc := app.NewOperationService(operationRepo)
+	operationSvc := app.NewOperationService(specRepo, operationRepo)
 	runSvc := app.NewRunService(runRepo, worker)
 	reportSvc := app.NewReportService(runRepo)
 	commentSvc := app.NewCommentService(commentRepo)

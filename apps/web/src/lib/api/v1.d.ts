@@ -350,6 +350,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/specs/{spec-id}/operations/canvas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List API specs by spec ID operations canvas */
+        get: operations["list-api-specs-by-spec-id-operations-canvas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -440,6 +457,48 @@ export interface components {
             status: string;
             /** Format: int64 */
             total: number;
+        };
+        CanvasEdge: {
+            data?: {
+                [key: string]: unknown;
+            };
+            id: string;
+            source: string;
+            sourceHandle?: string;
+            target: string;
+            targetHandle?: string;
+            type: string;
+        };
+        CanvasGraph: {
+            default_auth?: string;
+            default_environment?: string;
+            edges: components["schemas"]["CanvasEdge"][] | null;
+            nodes: components["schemas"]["CanvasNode"][] | null;
+            /** Format: int64 */
+            version: number;
+            viewport?: components["schemas"]["CanvasViewport"];
+        };
+        CanvasNode: {
+            data?: {
+                [key: string]: unknown;
+            };
+            id: string;
+            position: components["schemas"]["CanvasPosition"];
+            type: string;
+        };
+        CanvasPosition: {
+            /** Format: double */
+            x: number;
+            /** Format: double */
+            y: number;
+        };
+        CanvasViewport: {
+            /** Format: double */
+            x: number;
+            /** Format: double */
+            y: number;
+            /** Format: double */
+            zoom: number;
         };
         Capture: {
             name: string;
@@ -735,11 +794,19 @@ export interface components {
             is_destructive: boolean;
             method: string;
             operation_id: string;
+            parameters?: components["schemas"]["OperationParameter"][] | null;
             path: string;
             query_hints?: components["schemas"]["QueryHints"];
+            request_schema?: unknown;
             response_schema?: unknown;
             summary: string;
             tags: string[] | null;
+        };
+        OperationParameter: {
+            in: string;
+            name: string;
+            required: boolean;
+            schema?: unknown;
         };
         PlanPreviewResponse: {
             /**
@@ -796,6 +863,7 @@ export interface components {
              */
             readonly $schema?: string;
             auth_profiles: components["schemas"]["AuthProfile"][] | null;
+            canvas?: components["schemas"]["CanvasGraph"];
             environments: components["schemas"]["Environment"][] | null;
             flows: components["schemas"]["Flow"][] | null;
             suites: components["schemas"]["Suite"][] | null;
@@ -1909,6 +1977,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Operation"][] | null;
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "list-api-specs-by-spec-id-operations-canvas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Spec UUID */
+                "spec-id": string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationInfo"][] | null;
                 };
             };
             /** @description Error */
