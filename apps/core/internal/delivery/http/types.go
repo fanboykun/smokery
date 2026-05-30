@@ -187,6 +187,18 @@ type MermaidOutput struct {
 	Body string
 }
 
+type ContractReportOutput struct {
+	Body report.ContractView
+}
+
+type AnalystReportOutput struct {
+	Body report.AnalystView
+}
+
+type QAReportOutput struct {
+	Body report.QAView
+}
+
 // --- Artifacts ---
 
 type ArtifactListOutput struct {
@@ -209,4 +221,24 @@ type CommentOutput struct {
 
 type CommentListOutput struct {
 	Body []model.Comment
+}
+
+// --- Failure Classification ---
+
+type ClassifyRunInput struct {
+	IDParam
+	Body struct {
+		Classification string `json:"classification" minLength:"1" doc:"Failure classification"`
+		Assignee       string `json:"assignee" doc:"Assigned user"`
+		Note           string `json:"note" doc:"Optional note"`
+		Author         string `json:"author" minLength:"1" doc:"Who classified"`
+	}
+}
+
+type FailureClassificationOutput struct {
+	Body model.FailureClassification
+}
+
+type FailureClassificationListOutput struct {
+	Body []model.FailureClassification
 }

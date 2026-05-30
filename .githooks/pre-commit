@@ -7,5 +7,5 @@ CHANGED=$(git diff --cached --name-only --diff-filter=ACM | grep -E "^apps/core/
 if [ -n "$CHANGED" ]; then
   echo "API files changed, regenerating OpenAPI spec + TypeScript types..."
   make generate
-  git add apps/web/openapi.json apps/web/src/lib/api/v1.d.ts
+  git add apps/web/src/lib/api/v1.d.ts
 fi

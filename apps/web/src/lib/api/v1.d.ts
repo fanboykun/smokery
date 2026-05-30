@@ -214,6 +214,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/{id}/report/analyst": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get API runs by ID report analyst */
+        get: operations["get-api-runs-by-id-report-analyst"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/runs/{id}/report/ci": {
         parameters: {
             query?: never;
@@ -223,6 +240,23 @@ export interface paths {
         };
         /** Get API runs by ID report ci */
         get: operations["get-api-runs-by-id-report-ci"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{id}/report/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get API runs by ID report contract */
+        get: operations["get-api-runs-by-id-report-contract"];
         put?: never;
         post?: never;
         delete?: never;
@@ -257,6 +291,23 @@ export interface paths {
         };
         /** Get API runs by ID report mermaid */
         get: operations["get-api-runs-by-id-report-mermaid"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{id}/report/qa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get API runs by ID report qa */
+        get: operations["get-api-runs-by-id-report-qa"];
         put?: never;
         post?: never;
         delete?: never;
@@ -331,6 +382,19 @@ export interface components {
             title: string;
             version: string;
         };
+        AnalystView: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/AnalystView.json
+             */
+            readonly $schema?: string;
+            recommendations: components["schemas"]["Recommendation"][] | null;
+            root_causes: components["schemas"]["RootCause"][] | null;
+            run_id: string;
+            summary: string;
+            timeline_insights: components["schemas"]["TimelineInsight"][] | null;
+        };
         Artifact: {
             /** Format: date-time */
             created_at: string;
@@ -342,6 +406,13 @@ export interface components {
         Assertion: {
             expected?: unknown;
             path?: string;
+            type: string;
+        };
+        AssertionResult: {
+            actual?: unknown;
+            expected?: unknown;
+            message?: string;
+            passed: boolean;
             type: string;
         };
         AuthProfile: {
@@ -375,6 +446,11 @@ export interface components {
             path: string;
             source: string;
         };
+        CaseResult: {
+            case_type: string;
+            operation_id: string;
+            step: components["schemas"]["StepResult"];
+        };
         Comment: {
             /**
              * Format: uri
@@ -389,12 +465,42 @@ export interface components {
             id: string;
             run_id: string;
         };
-        CompileError: {
-            entity?: string;
+        ContractView: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/ContractView.json
+             */
+            readonly $schema?: string;
+            /** Format: double */
+            compliance_score: number;
+            errors: components["schemas"]["ContractViolation"][] | null;
+            /** Format: int64 */
+            failed_assertions: number;
+            /** Format: int64 */
+            passed_assertions: number;
+            run_id: string;
+            /** Format: int64 */
+            total_violations: number;
+            warnings: components["schemas"]["ContractViolation"][] | null;
+        };
+        ContractViolation: {
+            actual_value?: unknown;
+            expected_schema?: unknown;
+            id: string;
+            location: string;
             message: string;
-            path: string;
+            operation_id: string;
             severity: string;
-            stage: string;
+            violation_type: string;
+        };
+        CoverageSummary: {
+            /** Format: double */
+            coverage_percentage: number;
+            /** Format: int64 */
+            tested_operations: number;
+            /** Format: int64 */
+            total_operations: number;
         };
         CreateCommentInputBody: {
             /**
@@ -445,6 +551,26 @@ export interface components {
             run_id: string;
             status: string;
             traces?: components["schemas"]["TraceInfo"][] | null;
+        };
+        Diagnostic: {
+            code: string;
+            entity_id?: string;
+            entity_type?: string;
+            location?: string;
+            message: string;
+            severity: string;
+        };
+        DiagnosticSummary: {
+            is_compilable: boolean;
+            /** Format: int64 */
+            total_errors: number;
+            /** Format: int64 */
+            total_warnings: number;
+        };
+        Diagnostics: {
+            errors?: components["schemas"]["Diagnostic"][] | null;
+            summary: components["schemas"]["DiagnosticSummary"];
+            warnings?: components["schemas"]["Diagnostic"][] | null;
         };
         EnumParam: {
             name: string;
@@ -528,6 +654,13 @@ export interface components {
             name: string;
             steps: components["schemas"]["PlannedStep"][] | null;
         };
+        FlowResult: {
+            cleanup?: components["schemas"]["StepResult"][] | null;
+            flow_id: string;
+            name: string;
+            status: string;
+            steps: components["schemas"]["StepResult"][] | null;
+        };
         FlowStep: {
             assertions?: components["schemas"]["Assertion"][] | null;
             body?: unknown;
@@ -569,6 +702,14 @@ export interface components {
             /** @description URL to download the OpenAPI spec from */
             url: string;
         };
+        LastRunInfo: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: int64 */
+            duration_ms: number;
+            id: string;
+            status: string;
+        };
         Operation: {
             /**
              * Format: uri
@@ -600,16 +741,15 @@ export interface components {
             summary: string;
             tags: string[] | null;
         };
-        Output: {
+        PlanPreviewResponse: {
             /**
              * Format: uri
              * @description A URL to the JSON Schema for this object.
-             * @example http://localhost:8080/schemas/Output.json
+             * @example http://localhost:8080/schemas/PlanPreviewResponse.json
              */
             readonly $schema?: string;
-            errors?: components["schemas"]["CompileError"][] | null;
+            diagnostics: components["schemas"]["Diagnostics"];
             plan?: components["schemas"]["SmokePlan"];
-            warnings?: components["schemas"]["CompileError"][] | null;
         };
         PlannedCase: {
             case_type: string;
@@ -660,10 +800,94 @@ export interface components {
             flows: components["schemas"]["Flow"][] | null;
             suites: components["schemas"]["Suite"][] | null;
         };
+        ProjectHealthStats: {
+            /** Format: int64 */
+            env_count: number;
+            /** Format: int64 */
+            failed_runs: number;
+            /** Format: int64 */
+            flow_count: number;
+            /** Format: double */
+            health_percentage: number;
+            /** Format: int64 */
+            passed_runs: number;
+            /** Format: int64 */
+            suite_count: number;
+            /** Format: int64 */
+            total_runs: number;
+        };
+        ProjectWithStats: {
+            /** Format: date-time */
+            created_at: string;
+            description: string;
+            id: string;
+            last_run?: components["schemas"]["LastRunInfo"];
+            name: string;
+            /** Format: int64 */
+            spec_count: number;
+            stats: components["schemas"]["ProjectHealthStats"];
+            /** Format: date-time */
+            updated_at: string;
+        };
+        QABlocker: {
+            issue: string;
+            operation_id: string;
+            severity: string;
+        };
+        QAView: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/QAView.json
+             */
+            readonly $schema?: string;
+            blockers: components["schemas"]["QABlocker"][] | null;
+            coverage_summary: components["schemas"]["CoverageSummary"];
+            /** Format: int64 */
+            failed_tests: number;
+            flaky_tests: string[] | null;
+            /** Format: double */
+            pass_rate: number;
+            /** Format: int64 */
+            passed_tests: number;
+            run_id: string;
+            status: string;
+            /** Format: int64 */
+            total_tests: number;
+        };
         QueryHints: {
             enum_filters?: components["schemas"]["EnumParam"][] | null;
             pagination_params?: string[] | null;
             search_params?: string[] | null;
+        };
+        Recommendation: {
+            description: string;
+            priority: string;
+            title: string;
+        };
+        RequestMeta: {
+            body?: unknown;
+            headers?: {
+                [key: string]: string;
+            };
+            method: string;
+            url: string;
+        };
+        ResponseMeta: {
+            body?: unknown;
+            headers?: {
+                [key: string]: string;
+            };
+            request_id?: string;
+            /** Format: int64 */
+            status: number;
+            trace_id?: string;
+        };
+        RootCause: {
+            affected_operations: string[] | null;
+            cause: string;
+            /** Format: int64 */
+            impact: number;
         };
         Run: {
             /**
@@ -682,6 +906,47 @@ export interface components {
             /** Format: date-time */
             started_at?: string;
             status: string;
+        };
+        RunMeta: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/RunMeta.json
+             */
+            readonly $schema?: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: int64 */
+            fallback_poll_interval_ms: number;
+            /** Format: date-time */
+            finished_at?: string;
+            id: string;
+            plan_id?: string;
+            project_id: string;
+            /** Format: date-time */
+            started_at?: string;
+            status: string;
+            websocket_url: string;
+        };
+        RunResult: {
+            /**
+             * Format: uri
+             * @description A URL to the JSON Schema for this object.
+             * @example http://localhost:8080/schemas/RunResult.json
+             */
+            readonly $schema?: string;
+            /** Format: int64 */
+            duration_ms: number;
+            /** Format: date-time */
+            finished_at: string;
+            flows?: components["schemas"]["FlowResult"][] | null;
+            run_id: string;
+            /** Format: date-time */
+            started_at: string;
+            status: string;
+            suites?: components["schemas"]["SuiteResult"][] | null;
         };
         SmokePlan: {
             auth?: components["schemas"]["AuthProfile"];
@@ -703,18 +968,18 @@ export interface components {
             title: string;
             version: string;
         };
-        StoredRunResult: {
-            /**
-             * Format: uri
-             * @description A URL to the JSON Schema for this object.
-             * @example http://localhost:8080/schemas/StoredRunResult.json
-             */
-            readonly $schema?: string;
-            /** Format: date-time */
-            created_at: string;
-            id: string;
-            result: string;
-            run_id: string;
+        StepResult: {
+            assertions: components["schemas"]["AssertionResult"][] | null;
+            captures?: {
+                [key: string]: unknown;
+            };
+            /** Format: int64 */
+            duration_ms: number;
+            error?: string;
+            name: string;
+            request: components["schemas"]["RequestMeta"];
+            response: components["schemas"]["ResponseMeta"];
+            status: string;
         };
         Suite: {
             auth?: string;
@@ -728,6 +993,12 @@ export interface components {
         SuitePlan: {
             cases: components["schemas"]["PlannedCase"][] | null;
             name: string;
+            suite_id: string;
+        };
+        SuiteResult: {
+            cases: components["schemas"]["CaseResult"][] | null;
+            name: string;
+            status: string;
             suite_id: string;
         };
         SuiteSelector: {
@@ -744,6 +1015,14 @@ export interface components {
             max_cases_per_op?: number;
             pagination: boolean;
             search_from_response: boolean;
+        };
+        TimelineInsight: {
+            /** Format: int64 */
+            duration_ms: number;
+            error?: string;
+            operation_id: string;
+            status: string;
+            timestamp: string;
         };
         TraceInfo: {
             request_id?: string;
@@ -870,7 +1149,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Project"][] | null;
+                    "application/json": components["schemas"]["ProjectWithStats"][] | null;
                 };
             };
             /** @description Error */
@@ -1037,7 +1316,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Output"];
+                    "application/json": components["schemas"]["PlanPreviewResponse"];
                 };
             };
             /** @description Error */
@@ -1241,7 +1520,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Run"];
+                    "application/json": components["schemas"]["RunMeta"];
                 };
             };
             /** @description Error */
@@ -1387,6 +1666,38 @@ export interface operations {
             };
         };
     };
+    "get-api-runs-by-id-report-analyst": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalystView"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "get-api-runs-by-id-report-ci": {
         parameters: {
             query?: never;
@@ -1406,6 +1717,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CISummary"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
+    "get-api-runs-by-id-report-contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractView"];
                 };
             };
             /** @description Error */
@@ -1483,6 +1826,38 @@ export interface operations {
             };
         };
     };
+    "get-api-runs-by-id-report-qa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Resource UUID */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QAView"];
+                };
+            };
+            /** @description Error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ErrorModel"];
+                };
+            };
+        };
+    };
     "get-api-runs-by-id-result": {
         parameters: {
             query?: never;
@@ -1501,7 +1876,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StoredRunResult"];
+                    "application/json": components["schemas"]["RunResult"];
                 };
             };
             /** @description Error */

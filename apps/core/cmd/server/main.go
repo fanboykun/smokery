@@ -46,6 +46,7 @@ func main() {
 		runRepo       port.RunRepo
 		commentRepo   port.CommentRepo
 		artifactRepo  port.ArtifactRepo
+		fcRepo        port.FailureClassificationRepo
 		dbPinger      func(ctx context.Context) error
 		dbCloser      func()
 	)
@@ -82,6 +83,7 @@ func main() {
 		runRepo = sqliteadapter.NewRunRepo(db)
 		commentRepo = sqliteadapter.NewCommentRepo(db)
 		artifactRepo = sqliteadapter.NewArtifactRepo(db)
+		fcRepo = sqliteadapter.NewFailureClassificationRepo(db)
 		log.Info().Str("adapter", "sqlite").Str("path", cfg.SQLitePath).Msg("database connected")
 	}
 	defer dbCloser()
@@ -140,6 +142,17 @@ func main() {
 	artifactSvc := app.NewArtifactService(artifactRepo)
 	planSvc := app.NewPlanService(specRepo, operationRepo)
 
+	// Failure classification (only if repo available)
+	var fcSvc *app.FailureClassificationService
+	if fcRepo != nil {
+		fcSvc = app.NewFailureClassificationService(fcRepo)
+	}
+
+	// Phase 2 services
+	specEvoSvc := app.NewSpecEvolutionService(specRepo, operationRepo)
+	analyticsSvc := app.NewAnalyticsService(runRepo)
+	governanceSvc := app.NewGovernanceService()
+
 	// --- Echo + Huma ---
 	e := echo.New()
 	e.HideBanner = true
@@ -180,6 +193,12 @@ func main() {
 	deliveryhttp.RegisterArtifacts(api, artifactSvc)
 	deliveryhttp.RegisterWebSocket(e, eventBus)
 	deliveryhttp.RegisterPlan(api, planSvc)
+	if fcSvc != nil {
+		deliveryhttp.RegisterFailureClassifications(api, fcSvc)
+	}
+	deliveryhttp.RegisterSpecEvolution(api, specEvoSvc)
+	deliveryhttp.RegisterAnalytics(api, analyticsSvc)
+	deliveryhttp.RegisterGovernance(api, governanceSvc)
 
 	// --- Embedded frontend (production only, built with -tags embed_frontend) ---
 	if frontendFS := frontend.FS(); frontendFS != nil {

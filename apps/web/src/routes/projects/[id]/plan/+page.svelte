@@ -83,7 +83,7 @@
       <p class="text-sm text-muted-foreground">Compile your project config and preview the generated smoke plan.</p>
     </div>
     <div class="flex gap-2">
-      <Button variant="outline" href="/projects/{projectId}/environments">← Config</Button>
+      <Button variant="outline" href="/projects/{projectId}/builder">← Config</Button>
       <Button onclick={() => compile.mutate()} disabled={compile.isPending}>
         {#if compile.isPending}<Loader2 class="size-4 animate-spin" />{/if}
         {compile.isPending ? 'Compiling…' : '▶ Compile'}

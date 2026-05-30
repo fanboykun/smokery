@@ -80,6 +80,16 @@ CREATE TABLE IF NOT EXISTS artifacts (
 	path TEXT NOT NULL,
 	created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS failure_classifications (
+	id TEXT PRIMARY KEY,
+	run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+	classification TEXT NOT NULL,
+	assignee TEXT NOT NULL DEFAULT '',
+	note TEXT NOT NULL DEFAULT '',
+	author TEXT NOT NULL,
+	created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 `
 
 // DB wraps a sql.DB with SQLite-specific initialization.
@@ -578,4 +588,70 @@ func (r *ArtifactRepo) DeleteByRun(ctx context.Context, runID uuid.UUID) ([]mode
 		return nil, err
 	}
 	return arts, nil
+}
+
+// --- FailureClassificationRepo ---
+
+type FailureClassificationRepo struct{ db *DB }
+
+func NewFailureClassificationRepo(db *DB) *FailureClassificationRepo {
+	return &FailureClassificationRepo{db: db}
+}
+
+var _ port.FailureClassificationRepo = (*FailureClassificationRepo)(nil)
+
+func (r *FailureClassificationRepo) Upsert(ctx context.Context, runID uuid.UUID, classification, assignee, note, author string) (*model.FailureClassification, error) {
+	// Delete existing for this run, then insert new
+	_, _ = r.db.ExecContext(ctx, "DELETE FROM failure_classifications WHERE run_id = ?", runID.String())
+	id := newID()
+	now := nowStr()
+	_, err := r.db.ExecContext(ctx,
+		"INSERT INTO failure_classifications (id, run_id, classification, assignee, note, author, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		id, runID.String(), classification, assignee, note, author, now)
+	if err != nil {
+		return nil, err
+	}
+	return &model.FailureClassification{
+		ID: parseUUID(id), RunID: runID, Classification: classification,
+		Assignee: assignee, Note: note, Author: author, CreatedAt: parseTime(now),
+	}, nil
+}
+
+func (r *FailureClassificationRepo) GetByRun(ctx context.Context, runID uuid.UUID) (*model.FailureClassification, error) {
+	row := r.db.QueryRowContext(ctx, "SELECT id, run_id, classification, assignee, note, author, created_at FROM failure_classifications WHERE run_id = ? ORDER BY created_at DESC LIMIT 1", runID.String())
+	var fc model.FailureClassification
+	var idStr, runStr, createdAt string
+	if err := row.Scan(&idStr, &runStr, &fc.Classification, &fc.Assignee, &fc.Note, &fc.Author, &createdAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	fc.ID = parseUUID(idStr)
+	fc.RunID = parseUUID(runStr)
+	fc.CreatedAt = parseTime(createdAt)
+	return &fc, nil
+}
+
+func (r *FailureClassificationRepo) ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.FailureClassification, error) {
+	rows, err := r.db.QueryContext(ctx,
+		"SELECT fc.id, fc.run_id, fc.classification, fc.assignee, fc.note, fc.author, fc.created_at FROM failure_classifications fc JOIN runs r ON fc.run_id = r.id WHERE r.project_id = ? ORDER BY fc.created_at DESC",
+		projectID.String())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []model.FailureClassification
+	for rows.Next() {
+		var fc model.FailureClassification
+		var idStr, runStr, createdAt string
+		if err := rows.Scan(&idStr, &runStr, &fc.Classification, &fc.Assignee, &fc.Note, &fc.Author, &createdAt); err != nil {
+			return nil, err
+		}
+		fc.ID = parseUUID(idStr)
+		fc.RunID = parseUUID(runStr)
+		fc.CreatedAt = parseTime(createdAt)
+		out = append(out, fc)
+	}
+	return out, nil
 }

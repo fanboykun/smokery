@@ -50,3 +50,9 @@ type ArtifactRepo interface {
 	ListByRun(ctx context.Context, runID uuid.UUID) ([]model.Artifact, error)
 	DeleteByRun(ctx context.Context, runID uuid.UUID) ([]model.Artifact, error)
 }
+
+type FailureClassificationRepo interface {
+	Upsert(ctx context.Context, runID uuid.UUID, classification, assignee, note, author string) (*model.FailureClassification, error)
+	GetByRun(ctx context.Context, runID uuid.UUID) (*model.FailureClassification, error)
+	ListByProject(ctx context.Context, projectID uuid.UUID) ([]model.FailureClassification, error)
+}
