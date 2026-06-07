@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import type { CanvasGraph } from '$lib/canvas/types';
 import { browser } from '$app/environment';
 
 export interface Environment {
@@ -66,6 +67,7 @@ export interface ProjectConfig {
 	auth_profiles: AuthProfile[];
 	flows: Flow[];
 	suites: Suite[];
+	canvas?: CanvasGraph;
 }
 
 function storageKey(projectId: string) {

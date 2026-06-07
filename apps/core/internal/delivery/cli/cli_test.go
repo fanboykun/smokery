@@ -22,7 +22,7 @@ func newTestServices() *cli.Services {
 	return &cli.Services{
 		Project:   app.NewProjectService(memory.NewProjectRepo(store)),
 		Spec:      app.NewSpecService(memory.NewSpecRepo(store), memory.NewOperationRepo(store)),
-		Operation: app.NewOperationService(memory.NewOperationRepo(store)),
+		Operation: app.NewOperationService(memory.NewSpecRepo(store), memory.NewOperationRepo(store)),
 		Run:       app.NewRunService(memory.NewRunRepo(store), noopJobs{}),
 		Report:    app.NewReportService(memory.NewRunRepo(store)),
 		Runner:    runner.New(runner.DefaultOptions()),

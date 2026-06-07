@@ -159,7 +159,7 @@
       <h1 class="text-3xl font-bold">{suite.name || 'New Suite'}</h1>
     </div>
     <div class="flex gap-2">
-      <Button variant="outline" href="/projects/{projectId}/environments">← Back</Button>
+      <Button variant="outline" href="/projects/{projectId}/builder">← Back</Button>
       {#if !isNew}
         <Button variant="destructive" onclick={deleteSuite}>Delete</Button>
       {/if}

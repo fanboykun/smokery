@@ -12,7 +12,8 @@
   import { Loader2, AlertCircle, CheckCircle2 } from '@lucide/svelte';
   import type { components } from '$lib/api/v1';
 
-  type CompilerOutput = components['schemas']['Output'];
+  type CompilerOutput = components['schemas']['PlanPreviewResponse'];
+  type Diagnostic = components['schemas']['Diagnostic'];
 
   const projectId = $page.params.id!;
   const config = createProjectConfigStore(projectId);
@@ -44,21 +45,23 @@
     onSuccess: (data) => { result = data; },
   }));
 
-  const hasErrors = $derived((result?.errors?.length ?? 0) > 0);
-  const hasWarnings = $derived((result?.warnings?.length ?? 0) > 0);
+  const errors = $derived(result?.diagnostics.errors ?? []);
+  const warnings = $derived(result?.diagnostics.warnings ?? []);
+  const hasErrors = $derived(errors.length > 0);
+  const hasWarnings = $derived(warnings.length > 0);
   const plan = $derived(result?.plan);
 
   // Group warnings by message to collapse duplicates
   const groupedWarnings = $derived(
-    (result?.warnings ?? []).reduce<{ message: string; stage: string; items: NonNullable<typeof result>['warnings'] }[]>((acc, w) => {
+    warnings.reduce<{ message: string; severity: string; items: Diagnostic[] }[]>((acc, w) => {
       const existing = acc.find((g) => g.message === w.message);
-      if (existing) existing.items!.push(w);
-      else acc.push({ message: w.message, stage: w.stage, items: [w] });
+      if (existing) existing.items.push(w);
+      else acc.push({ message: w.message, severity: w.severity, items: [w] });
       return acc;
     }, []),
   );
-  const totalFlowSteps = $derived(plan?.flow_plans?.reduce((n, f) => n + (f.steps?.length ?? 0), 0) ?? 0);
-  const totalCases = $derived(plan?.suite_plans?.reduce((n, s) => n + (s.cases?.length ?? 0), 0) ?? 0);
+  const totalFlowSteps = $derived(plan?.flow_plans?.reduce((n: number, f) => n + (f.steps?.length ?? 0), 0) ?? 0);
+  const totalCases = $derived(plan?.suite_plans?.reduce((n: number, s) => n + (s.cases?.length ?? 0), 0) ?? 0);
 
   const startRun = createMutation(() => ({
     mutationFn: async () => {
@@ -83,7 +86,7 @@
       <p class="text-sm text-muted-foreground">Compile your project config and preview the generated smoke plan.</p>
     </div>
     <div class="flex gap-2">
-      <Button variant="outline" href="/projects/{projectId}/environments">← Config</Button>
+      <Button variant="outline" href="/projects/{projectId}/builder">← Config</Button>
       <Button onclick={() => compile.mutate()} disabled={compile.isPending}>
         {#if compile.isPending}<Loader2 class="size-4 animate-spin" />{/if}
         {compile.isPending ? 'Compiling…' : '▶ Compile'}
@@ -122,34 +125,35 @@
         <Card.Header>
           <div class="flex items-center gap-2">
             <AlertCircle class="size-5 text-destructive" />
-            <Card.Title class="text-base text-destructive">Fix {result.errors!.length} error{result.errors!.length > 1 ? 's' : ''}</Card.Title>
+            <Card.Title class="text-base text-destructive">Fix {errors.length} error{errors.length > 1 ? 's' : ''}</Card.Title>
           </div>
         </Card.Header>
         <Card.Content class="space-y-3">
-          {#each result.errors! as err}
+          {#each errors as err}
             <div class="flex items-start gap-3 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm">
-              <div class="mt-0.5 flex-shrink-0">
-                <div class="size-2 rounded-full bg-destructive" />
+              <div class="mt-0.5 shrink-0">
+                <div class="size-2 rounded-full bg-destructive" >
+                </div>  
               </div>
               <div class="flex-1">
                 <p class="font-medium text-destructive">{err.message}</p>
                 <p class="mt-1 text-xs text-muted-foreground">
-                  {err.path}{err.entity ? ` in ${err.entity}` : ''} (stage: {err.stage})
+                  {err.location ?? err.code}{err.entity_id ? ` in ${err.entity_id}` : ''} (severity: {err.severity})
                 </p>
                 <!-- Action links based on error stage -->
-                {#if err.stage === 'flows' || err.message.includes('flow')}
+                {#if err.code.includes('flow') || err.message.includes('flow')}
                   <div class="mt-2 flex gap-2">
                     <a href="/projects/{projectId}/flows" class="inline-flex items-center gap-1 rounded-sm bg-destructive/20 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/30 transition-colors">
                       → Fix Flows
                     </a>
                   </div>
-                {:else if err.stage === 'suites' || err.message.includes('suite')}
+                {:else if err.code.includes('suite') || err.message.includes('suite')}
                   <div class="mt-2 flex gap-2">
                     <a href="/projects/{projectId}/suites" class="inline-flex items-center gap-1 rounded-sm bg-destructive/20 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/30 transition-colors">
                       → Fix Suites
                     </a>
                   </div>
-                {:else if err.stage === 'environments' || err.message.includes('environment')}
+                {:else if err.code.includes('environment') || err.message.includes('environment')}
                   <div class="mt-2 flex gap-2">
                     <a href="/projects/{projectId}/environments" class="inline-flex items-center gap-1 rounded-sm bg-destructive/20 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/30 transition-colors">
                       → Fix Environments
@@ -166,24 +170,24 @@
     <!-- Warnings (grouped) -->
     {#if hasWarnings}
       <Card.Root class="mb-4 border-yellow-600/50">
-        <Card.Header><Card.Title class="text-base text-yellow-500">Warnings ({result.warnings!.length})</Card.Title></Card.Header>
+        <Card.Header><Card.Title class="text-base text-yellow-500">Warnings ({warnings.length})</Card.Title></Card.Header>
         <Card.Content class="space-y-2">
           {#each groupedWarnings as group (group.message)}
             <div class="flex items-start gap-2 rounded-md bg-yellow-500/10 p-2 text-sm">
-              <Badge variant="outline" class="shrink-0 text-[0.6rem] text-yellow-500">{group.stage}</Badge>
+              <Badge variant="outline" class="shrink-0 text-[0.6rem] text-yellow-500">{group.severity}</Badge>
               <div class="min-w-0 flex-1">
                 <p class="font-medium">{group.message}</p>
-                {#if group.items!.length > 1}
+                {#if group.items.length > 1}
                   <details class="mt-1">
-                    <summary class="cursor-pointer text-xs text-muted-foreground">×{group.items!.length} occurrences</summary>
+                    <summary class="cursor-pointer text-xs text-muted-foreground">×{group.items.length} occurrences</summary>
                     <ul class="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                      {#each group.items! as w}
-                        <li>{w.path}{w.entity ? ` (${w.entity})` : ''}</li>
+                      {#each group.items as w}
+                        <li>{w.location ?? w.code}{w.entity_id ? ` (${w.entity_id})` : ''}</li>
                       {/each}
                     </ul>
                   </details>
                 {:else}
-                  <p class="text-xs text-muted-foreground">{group.items![0].path}{group.items![0].entity ? ` (${group.items![0].entity})` : ''}</p>
+                  <p class="text-xs text-muted-foreground">{group.items[0].location ?? group.items[0].code}{group.items[0].entity_id ? ` (${group.items[0].entity_id})` : ''}</p>
                 {/if}
               </div>
             </div>

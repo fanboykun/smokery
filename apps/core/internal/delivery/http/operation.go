@@ -24,6 +24,18 @@ func RegisterOperations(api huma.API, svc *app.OperationService) {
 		return &OperationListOutput{Body: ops}, nil
 	})
 
+	huma.Get(api, "/api/specs/{spec-id}/operations/canvas", func(ctx context.Context, in *SpecIDParam) (*CanvasOperationListOutput, error) {
+		specID, err := uuid.Parse(in.SpecID)
+		if err != nil {
+			return nil, ErrBadRequest("operations", "invalid spec id")
+		}
+		ops, err := svc.CanvasBySpec(ctx, specID)
+		if err != nil {
+			return nil, ErrInternal("operations", "failed to load canvas operation metadata", err)
+		}
+		return &CanvasOperationListOutput{Body: ops}, nil
+	})
+
 	huma.Put(api, "/api/operations/{id}/classification", func(ctx context.Context, in *UpdateClassificationInput) (*OperationOutput, error) {
 		id, err := uuid.Parse(in.ID)
 		if err != nil {

@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"strings"
 
+	"go.yaml.in/yaml/v4"
+
 	"github.com/pb33f/libopenapi"
+	"github.com/pb33f/libopenapi/datamodel/high/base"
 	v3 "github.com/pb33f/libopenapi/datamodel/high/v3"
 )
 
@@ -20,16 +23,25 @@ type EnumParam struct {
 	Values []string `json:"values"`
 }
 
+type OperationParameter struct {
+	Name     string          `json:"name"`
+	In       string          `json:"in"`
+	Required bool            `json:"required"`
+	Schema   json.RawMessage `json:"schema,omitempty"`
+}
+
 type OperationInfo struct {
-	OperationID    string          `json:"operation_id"`
-	Method         string          `json:"method"`
-	Path           string          `json:"path"`
-	Summary        string          `json:"summary"`
-	Tags           []string        `json:"tags"`
-	Classification string          `json:"classification"`
-	IsDestructive  bool            `json:"is_destructive"`
-	QueryHints     QueryHints      `json:"query_hints,omitempty"`
-	ResponseSchema json.RawMessage `json:"response_schema,omitempty"` // JSON Schema for success response
+	OperationID    string               `json:"operation_id"`
+	Method         string               `json:"method"`
+	Path           string               `json:"path"`
+	Summary        string               `json:"summary"`
+	Tags           []string             `json:"tags"`
+	Classification string               `json:"classification"`
+	IsDestructive  bool                 `json:"is_destructive"`
+	Parameters     []OperationParameter `json:"parameters,omitempty"`
+	RequestSchema  json.RawMessage      `json:"request_schema,omitempty"`
+	QueryHints     QueryHints           `json:"query_hints,omitempty"`
+	ResponseSchema json.RawMessage      `json:"response_schema,omitempty"` // JSON Schema for success response
 }
 
 type Analysis struct {
@@ -92,6 +104,8 @@ func extractOps(path string, item *v3.PathItem, ops *[]OperationInfo) {
 		tags = append(tags, op.Tags...)
 		classification := Classify(method, path, opID)
 		hints := extractQueryHints(op)
+		params := extractParameters(op)
+		reqSchema := extractRequestSchema(op)
 		respSchema := extractResponseSchema(op)
 		*ops = append(*ops, OperationInfo{
 			OperationID:    opID,
@@ -101,10 +115,31 @@ func extractOps(path string, item *v3.PathItem, ops *[]OperationInfo) {
 			Tags:           tags,
 			Classification: classification,
 			IsDestructive:  isDestructive(method, opID),
+			Parameters:     params,
+			RequestSchema:  reqSchema,
 			QueryHints:     hints,
 			ResponseSchema: respSchema,
 		})
 	}
+}
+
+func extractParameters(op *v3.Operation) []OperationParameter {
+	if op.Parameters == nil {
+		return nil
+	}
+	var out []OperationParameter
+	for _, param := range op.Parameters {
+		if param == nil {
+			continue
+		}
+		out = append(out, OperationParameter{
+			Name:     param.Name,
+			In:       param.In,
+			Required: param.Required != nil && *param.Required,
+			Schema:   renderSchemaProxy(param.Schema),
+		})
+	}
+	return out
 }
 
 func extractQueryHints(op *v3.Operation) QueryHints {
@@ -163,6 +198,17 @@ func extractResponseSchema(op *v3.Operation) json.RawMessage {
 	return nil
 }
 
+func extractRequestSchema(op *v3.Operation) json.RawMessage {
+	if op.RequestBody == nil || op.RequestBody.Content == nil {
+		return nil
+	}
+	mt := op.RequestBody.Content.GetOrZero("application/json")
+	if mt == nil {
+		return nil
+	}
+	return renderSchemaProxy(mt.Schema)
+}
+
 func schemaFromResponse(resp *v3.Response) json.RawMessage {
 	if resp == nil || resp.Content == nil {
 		return nil
@@ -171,19 +217,23 @@ func schemaFromResponse(resp *v3.Response) json.RawMessage {
 	if mt == nil {
 		return nil
 	}
-	if mt.Schema == nil || mt.Schema.Schema() == nil {
+	return renderSchemaProxy(mt.Schema)
+}
+
+func renderSchemaProxy(proxy *base.SchemaProxy) json.RawMessage {
+	if proxy == nil || proxy.Schema() == nil {
 		return nil
 	}
-	rendered, err := mt.Schema.Schema().Render()
+	rendered, err := proxy.Schema().Render()
 	if err != nil {
 		return nil
 	}
-	// Convert YAML to JSON
 	var raw any
-	if json.Unmarshal(rendered, &raw) == nil {
-		return rendered
+	if err := json.Unmarshal(rendered, &raw); err != nil {
+		if err := yaml.Unmarshal(rendered, &raw); err != nil {
+			return nil
+		}
 	}
-	// rendered might be YAML, try converting
 	jsonBytes, err := json.Marshal(raw)
 	if err != nil {
 		return nil

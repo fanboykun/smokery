@@ -46,4 +46,40 @@ func RegisterReports(api huma.API, svc *app.ReportService) {
 		}
 		return &MermaidOutput{Body: s}, nil
 	})
+
+	huma.Get(api, "/api/runs/{id}/report/contract", func(ctx context.Context, in *IDParam) (*ContractReportOutput, error) {
+		id, err := uuid.Parse(in.ID)
+		if err != nil {
+			return nil, ErrBadRequest("reports", "invalid id")
+		}
+		v, err := svc.ContractView(ctx, id)
+		if err != nil {
+			return nil, ErrNotFound("reports", "result not found")
+		}
+		return &ContractReportOutput{Body: *v}, nil
+	})
+
+	huma.Get(api, "/api/runs/{id}/report/analyst", func(ctx context.Context, in *IDParam) (*AnalystReportOutput, error) {
+		id, err := uuid.Parse(in.ID)
+		if err != nil {
+			return nil, ErrBadRequest("reports", "invalid id")
+		}
+		v, err := svc.AnalystView(ctx, id)
+		if err != nil {
+			return nil, ErrNotFound("reports", "result not found")
+		}
+		return &AnalystReportOutput{Body: *v}, nil
+	})
+
+	huma.Get(api, "/api/runs/{id}/report/qa", func(ctx context.Context, in *IDParam) (*QAReportOutput, error) {
+		id, err := uuid.Parse(in.ID)
+		if err != nil {
+			return nil, ErrBadRequest("reports", "invalid id")
+		}
+		v, err := svc.QAView(ctx, id)
+		if err != nil {
+			return nil, ErrNotFound("reports", "result not found")
+		}
+		return &QAReportOutput{Body: *v}, nil
+	})
 }

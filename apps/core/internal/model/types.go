@@ -12,6 +12,44 @@ type ProjectConfig struct {
 	AuthProfiles []AuthProfile `json:"auth_profiles"`
 	Flows        []Flow        `json:"flows"`
 	Suites       []Suite       `json:"suites"`
+	Canvas       *CanvasGraph  `json:"canvas,omitempty"`
+}
+
+type CanvasGraph struct {
+	Version            int            `json:"version"`
+	DefaultEnvironment string         `json:"default_environment,omitempty"`
+	DefaultAuth        string         `json:"default_auth,omitempty"`
+	Nodes              []CanvasNode   `json:"nodes"`
+	Edges              []CanvasEdge   `json:"edges"`
+	Viewport           CanvasViewport `json:"viewport,omitempty"`
+}
+
+type CanvasNode struct {
+	ID       string         `json:"id"`
+	Type     string         `json:"type"`
+	Position CanvasPosition `json:"position"`
+	Data     map[string]any `json:"data,omitempty"`
+}
+
+type CanvasEdge struct {
+	ID           string         `json:"id"`
+	Type         string         `json:"type"`
+	Source       string         `json:"source"`
+	SourceHandle string         `json:"sourceHandle,omitempty"`
+	Target       string         `json:"target"`
+	TargetHandle string         `json:"targetHandle,omitempty"`
+	Data         map[string]any `json:"data,omitempty"`
+}
+
+type CanvasPosition struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
+type CanvasViewport struct {
+	X    float64 `json:"x"`
+	Y    float64 `json:"y"`
+	Zoom float64 `json:"zoom"`
 }
 
 type Environment struct {
@@ -133,7 +171,7 @@ type PlannedCase struct {
 	OperationID       string        `json:"operation_id"`
 	CaseType          string        `json:"case_type"` // default_list, pagination, search, enum_filter
 	Step              PlannedStep   `json:"step"`
-	Steps             []PlannedStep `json:"steps,omitempty"` // multi-step cases (e.g. search-from-response)
+	Steps             []PlannedStep `json:"steps,omitempty"`               // multi-step cases (e.g. search-from-response)
 	EmptyResultPolicy string        `json:"empty_result_policy,omitempty"` // allow, warn, fail
 }
 

@@ -4,6 +4,10 @@
   import { api } from '$lib/api/client';
   import { onMount } from 'svelte';
   import MermaidDiagram from '$lib/components/MermaidDiagram.svelte';
+  import FailureClassifier from '$lib/components/FailureClassifier.svelte';
+  import AssigneeSelector from '$lib/components/AssigneeSelector.svelte';
+  import FailureTimeline from '$lib/components/FailureTimeline.svelte';
+  import { mockGetTeamMembers, mockGetFailureActions } from '$lib/api/mock-phase2';
   import * as Card from '$lib/components/ui/card';
   import * as Tabs from '$lib/components/ui/tabs';
   import { Badge } from '$lib/components/ui/badge';
@@ -19,6 +23,8 @@
   let statusFilter = $state('all');
   let stepsExpanded = $state(true);
   let activeTab = $state('timeline');
+  let classification = $state('');
+  let assignee = $state('');
   const runId = $page.params.runId!;
 
   const run = createQuery(() => ({
@@ -56,10 +62,7 @@
     queryFn: async () => {
       const { data, error } = await api.GET('/api/runs/{id}/result', { params: { path: { id: runId } } });
       if (error) throw error;
-      const raw = data!.result as string;
-      try { return JSON.parse(raw); } catch {}
-      try { return JSON.parse(atob(raw)); } catch {}
-      return null;
+      return data!;
     },
     enabled: run.data?.status === 'completed' || run.data?.status === 'failed',
   }));
@@ -72,6 +75,18 @@
       return data!;
     },
     enabled: run.data?.status === 'completed' || run.data?.status === 'failed',
+  }));
+
+  const teamMembers = createQuery(() => ({
+    queryKey: ['team-members', run.data?.project_id],
+    queryFn: () => mockGetTeamMembers(run.data!.project_id),
+    enabled: run.data?.status === 'failed',
+  }));
+
+  const failureActions = createQuery(() => ({
+    queryKey: ['failure-actions', runId],
+    queryFn: () => mockGetFailureActions(runId),
+    enabled: run.data?.status === 'failed',
   }));
 
   onMount(() => {
@@ -207,6 +222,38 @@
               {/each}
             </div>
           </details>
+        {/if}
+      </Card.Content>
+    </Card.Root>
+  {/if}
+
+  <!-- Failure Classification (shown when run failed) -->
+  {#if run.data?.status === 'failed'}
+    <Card.Root class="mb-4 border-destructive/30">
+      <Card.Header>
+        <Card.Title class="text-base">Failure Triage</Card.Title>
+      </Card.Header>
+      <Card.Content class="space-y-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="space-y-1.5">
+            <p class="text-xs font-medium text-muted-foreground">Classification</p>
+            <FailureClassifier bind:value={classification} onchange={(v) => (classification = v)} />
+          </div>
+          <div class="space-y-1.5">
+            <p class="text-xs font-medium text-muted-foreground">Assignee</p>
+            <AssigneeSelector
+              members={teamMembers.data ?? []}
+              bind:value={assignee}
+              onchange={(v) => (assignee = v)}
+              disabled={!teamMembers.data}
+            />
+          </div>
+        </div>
+        {#if failureActions.data && failureActions.data.length > 0}
+          <div class="border-t border-border pt-4">
+            <p class="mb-2 text-xs font-medium text-muted-foreground">Activity</p>
+            <FailureTimeline actions={failureActions.data} />
+          </div>
         {/if}
       </Card.Content>
     </Card.Root>

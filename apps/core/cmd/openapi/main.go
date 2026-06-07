@@ -32,7 +32,7 @@ func main() {
 	// backed by no-op port implementations so signatures resolve without a DB.
 	projectSvc := app.NewProjectService(noopProjectRepo{})
 	specSvc := app.NewSpecService(noopSpecRepo{}, noopOperationRepo{})
-	operationSvc := app.NewOperationService(noopOperationRepo{})
+	operationSvc := app.NewOperationService(noopSpecRepo{}, noopOperationRepo{})
 	runSvc := app.NewRunService(noopRunRepo{}, noopJobs{})
 	reportSvc := app.NewReportService(noopRunRepo{})
 	commentSvc := app.NewCommentService(noopCommentRepo{})
@@ -73,9 +73,9 @@ func (noopProjectRepo) Delete(context.Context, uuid.UUID) error { return nil }
 
 type noopSpecRepo struct{}
 
-func (noopSpecRepo) Create(context.Context, model.Spec) (*model.Spec, error)         { return nil, nil }
-func (noopSpecRepo) Get(context.Context, uuid.UUID) (*model.Spec, error)             { return nil, nil }
-func (noopSpecRepo) ListByProject(context.Context, uuid.UUID) ([]model.Spec, error)  { return nil, nil }
+func (noopSpecRepo) Create(context.Context, model.Spec) (*model.Spec, error)        { return nil, nil }
+func (noopSpecRepo) Get(context.Context, uuid.UUID) (*model.Spec, error)            { return nil, nil }
+func (noopSpecRepo) ListByProject(context.Context, uuid.UUID) ([]model.Spec, error) { return nil, nil }
 
 type noopOperationRepo struct{}
 
@@ -97,8 +97,8 @@ type noopRunRepo struct{}
 func (noopRunRepo) Create(context.Context, uuid.UUID, *uuid.UUID) (*model.Run, error) {
 	return nil, nil
 }
-func (noopRunRepo) Get(context.Context, uuid.UUID) (*model.Run, error)             { return nil, nil }
-func (noopRunRepo) ListByProject(context.Context, uuid.UUID) ([]model.Run, error)  { return nil, nil }
+func (noopRunRepo) Get(context.Context, uuid.UUID) (*model.Run, error)            { return nil, nil }
+func (noopRunRepo) ListByProject(context.Context, uuid.UUID) ([]model.Run, error) { return nil, nil }
 func (noopRunRepo) UpdateStatus(context.Context, uuid.UUID, string, *time.Time, *time.Time) (*model.Run, error) {
 	return nil, nil
 }
@@ -143,12 +143,12 @@ func (noopHealthChecker) PingBlob(context.Context) error { return nil }
 
 // Compile-time interface checks
 var (
-	_ port.ProjectRepo   = noopProjectRepo{}
-	_ port.SpecRepo      = noopSpecRepo{}
-	_ port.OperationRepo = noopOperationRepo{}
-	_ port.RunRepo       = noopRunRepo{}
-	_ port.CommentRepo   = noopCommentRepo{}
-	_ port.ArtifactRepo  = noopArtifactRepo{}
-	_ port.JobEnqueuer   = noopJobs{}
+	_ port.ProjectRepo           = noopProjectRepo{}
+	_ port.SpecRepo              = noopSpecRepo{}
+	_ port.OperationRepo         = noopOperationRepo{}
+	_ port.RunRepo               = noopRunRepo{}
+	_ port.CommentRepo           = noopCommentRepo{}
+	_ port.ArtifactRepo          = noopArtifactRepo{}
+	_ port.JobEnqueuer           = noopJobs{}
 	_ deliveryhttp.HealthChecker = noopHealthChecker{}
 )

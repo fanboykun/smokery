@@ -58,3 +58,27 @@ func (s *ReportService) Mermaid(ctx context.Context, runID uuid.UUID) (string, e
 	}
 	return report.GenerateMermaidDiagram(rr), nil
 }
+
+func (s *ReportService) ContractView(ctx context.Context, runID uuid.UUID) (*report.ContractView, error) {
+	rr, err := s.loadResult(ctx, runID)
+	if err != nil {
+		return nil, err
+	}
+	return report.GenerateContractView(rr), nil
+}
+
+func (s *ReportService) AnalystView(ctx context.Context, runID uuid.UUID) (*report.AnalystView, error) {
+	rr, err := s.loadResult(ctx, runID)
+	if err != nil {
+		return nil, err
+	}
+	return report.GenerateAnalystView(rr), nil
+}
+
+func (s *ReportService) QAView(ctx context.Context, runID uuid.UUID) (*report.QAView, error) {
+	rr, err := s.loadResult(ctx, runID)
+	if err != nil {
+		return nil, err
+	}
+	return report.GenerateQAView(rr), nil
+}

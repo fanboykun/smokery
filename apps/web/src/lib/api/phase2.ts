@@ -153,6 +153,7 @@ export interface ProjectMember {
   user_id: string;
   user_name: string;
   user_email: string;
+  avatar_url?: string;
   role: string;
   added_at: string;
   added_by: string;

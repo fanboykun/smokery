@@ -42,7 +42,7 @@ func main() {
 	svcs := &cli.Services{
 		Project:   app.NewProjectService(projectRepo),
 		Spec:      app.NewSpecService(specRepo, operationRepo),
-		Operation: app.NewOperationService(operationRepo),
+		Operation: app.NewOperationService(specRepo, operationRepo),
 		Run:       app.NewRunService(runRepo, &noopJobs{}),
 		Report:    app.NewReportService(runRepo),
 		Runner:    rnr,
