@@ -37,6 +37,9 @@ related:
 - [[Project State]] — latest project state, current phase, open work, and documentation guidance.
 - [[Agent Context]] — condensed implementation context for agents.
 - [[Engineering Rules]] — architecture, frontend, backend, and documentation rules.
+- [[Config Persistence Blockers]] — technical blockers and redesign plan for configuration persistence.
+- [[Canvas Schema and Property Linking]] — technical note on handling deep schemas and cross-plan variables.
+- [[Config Redesign Task List]] — detailed task checklist for implementing configuration persistence and canvas refactoring.
 - [[MVP Task List]] — what is truly left for MVP based on the current repo.
 - [[Phase 2 Task List]] — post-MVP roadmap.
 - [[Implementation Workflows]] — current implementation flow from spec import through preview, run, analytics, governance, and report follow-up.
@@ -47,6 +50,7 @@ related:
 - [[ADR - Compiler First Execution]]
 - [[ADR - Two Products One Core]]
 - [[ADR - Hexagonal Architecture]]
+- [[ADR - Config Builder Redesign]]
 
 ## Non-Markdown Artifacts
 

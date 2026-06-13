@@ -65,6 +65,24 @@ The compiler bakes everything the runner needs into the SmokePlan. The runner do
 - Run results are persistent and collaborative.
 - Reports, analytics, and governance must distinguish shipped backend capability from placeholder UI wiring.
 
+## herdr and kiro-cli Integration
+
+When requested to run `kiro-cli` within `herdr`, follow this direct workflow:
+1. Verify we are running inside `herdr` by checking `HERDR_ENV=1`.
+2. Find the current focused pane ID using `herdr pane list` (typically `w654224b5ee98e5-1` or similar format depending on the current session workspace).
+3. Split the pane to the right without moving focus, using:
+   ```bash
+   herdr pane split <current_pane_id> --direction right --no-focus
+   ```
+4. Run `kiro-cli chat` in the newly created pane (parse the new pane ID from the JSON result of the split command, e.g., `w654224b5ee98e5-2`):
+   ```bash
+   herdr pane run <new_pane_id> "kiro-cli chat"
+   ```
+5. Confirm initialization by reading the pane output:
+   ```bash
+   herdr pane read <new_pane_id> --source recent --lines 50
+   ```
+
 ## Related Notes
 
 - [[Project State]]
@@ -72,4 +90,7 @@ The compiler bakes everything the runner needs into the SmokePlan. The runner do
 - [[Architecture]]
 - [[Engineering Rules]]
 - [[MVP Task List]]
+- [[ADR - Config Builder Redesign]]
+- [[Config Redesign Task List]]
+
 

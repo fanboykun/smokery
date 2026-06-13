@@ -78,8 +78,14 @@ Deprecated documentation sets are being replaced:
 
 ## Recent Context Log
 
-### 2026-06-07 — Vault rework restored after reset
+### 2026-06-13 — herdr/kiro workflow, Config Redesign ADR, Technical Notes, and Tasks documented
+- Documented the exact workflow for spawning `kiro-cli chat` inside a new pane in `herdr` to ensure instant setup in future agent sessions.
+- Created `ADR - Config Builder Redesign.md` in `docs/04 Decisions/` detailing the hierarchical canvas workflow, OpenAPI spec drawer, and connection validation choices.
+- Created `Config Persistence Blockers.md` in `docs/03 Agent/` detailing database, repository, HTTP endpoint, and frontend changes needed to persist configurations.
+- Created `Canvas Schema and Property Linking.md` in `docs/03 Agent/` detailing the solutions for the schema slicing blocker (using pinned handles and drawer-based connections) and variable-based plan dependencies.
+- Created `Config Redesign Task List.md` in `docs/03 Agent/` declaring all database, repository, API, and frontend tasks mapped directly to decisions and blockers.
 
+### 2026-06-07 — Vault rework restored after reset
 - Recreated the Obsidian vault structure after the markdown rework was lost in a reset.
 - Rewrote the current-state notes around the actual repo surface, including phase-2 backend services and expanded frontend routes.
 - Re-established the rule that `docs/` is the single current documentation system and that the old flat docs plus `docs/ai` tree are deprecated.

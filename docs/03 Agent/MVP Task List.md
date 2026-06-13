@@ -47,4 +47,6 @@ related:
 - [[Project State]]
 - [[Engineering Rules]]
 - [[Phase 2 Task List]]
+- [[ADR - Config Builder Redesign]]
+- [[Config Redesign Task List]]
 
